@@ -23,6 +23,30 @@ class SleepRecord {
     required this.didNotOversleep, // 追加
   });
 
+  SleepRecord copyWith({
+    int? id,
+    DateTime? sleepTime,
+    DateTime? wakeUpTime,
+    int? score,
+    int? performance,
+    bool? hadDaytimeDrowsiness,
+    bool? hasAchievedGoal,
+    String? memo,
+    bool? didNotOversleep,
+  }) {
+    return SleepRecord(
+      id: id ?? this.id,
+      sleepTime: sleepTime ?? this.sleepTime,
+      wakeUpTime: wakeUpTime ?? this.wakeUpTime,
+      score: score ?? this.score,
+      performance: performance ?? this.performance,
+      hadDaytimeDrowsiness: hadDaytimeDrowsiness ?? this.hadDaytimeDrowsiness,
+      hasAchievedGoal: hasAchievedGoal ?? this.hasAchievedGoal,
+      memo: memo ?? this.memo,
+      didNotOversleep: didNotOversleep ?? this.didNotOversleep,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,

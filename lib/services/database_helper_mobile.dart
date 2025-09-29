@@ -1,10 +1,14 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../models/sleep_record.dart';
+import './api_service.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
+  final ApiService _apiService = ApiService();
 
   DatabaseHelper._init();
 
@@ -41,21 +45,28 @@ CREATE TABLE sleep_records (
 ''');
   }
 
+  Future<void> _syncWithServer(SleepRecord record) async {
+    final prefs = await SharedPreferences.getInstance();
+    final isRankingEnabled = prefs.getBool('rankingParticipation') ?? false;
+    final userId = prefs.getString('userId');
+
+    if (isRankingEnabled && userId != null) {
+      final duration = record.wakeUpTime.difference(record.sleepTime).inMinutes;
+      final date = DateFormat('yyyy-MM-dd').format(record.sleepTime);
+      await _apiService.submitRecord(userId, duration, date);
+    }
+  }
+
   Future<SleepRecord> create(SleepRecord record) async {
     final db = await instance.database;
     final Map<String, dynamic> row = record.toMap();
     row.remove('id');
     final id = await db.insert('sleep_records', row);
-    return SleepRecord(
-        id: id,
-        sleepTime: record.sleepTime,
-        wakeUpTime: record.wakeUpTime,
-        score: record.score,
-        performance: record.performance,
-        hadDaytimeDrowsiness: record.hadDaytimeDrowsiness,
-        hasAchievedGoal: record.hasAchievedGoal,
-        memo: record.memo,
-        didNotOversleep: record.didNotOversleep);
+    final newRecord = record.copyWith(id: id);
+
+    await _syncWithServer(newRecord);
+
+    return newRecord;
   }
 
   Future<SleepRecord?> readRecord(int id) async {
@@ -83,12 +94,16 @@ CREATE TABLE sleep_records (
 
   Future<int> update(SleepRecord record) async {
     final db = await instance.database;
-    return db.update(
+    final result = await db.update(
       'sleep_records',
       record.toMap(),
       where: 'id = ?',
       whereArgs: [record.id],
     );
+
+    await _syncWithServer(record);
+
+    return result;
   }
 
   Future<int> delete(int id) async {

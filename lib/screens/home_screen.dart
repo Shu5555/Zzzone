@@ -8,6 +8,7 @@ import '../services/database_helper.dart';
 import 'post_sleep_input_screen.dart';
 import 'history_screen.dart';
 import 'settings_screen.dart';
+import 'ranking_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -175,6 +176,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Zzzone'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.leaderboard_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RankingScreen())),
+          ),
           IconButton(icon: const Icon(Icons.settings), onPressed: _navigateToSettings),
           IconButton(icon: const Icon(Icons.history), onPressed: _navigateToHistory),
         ],

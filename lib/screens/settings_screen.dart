@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../services/api_service.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -19,22 +20,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLocked = false;
 
   // Ranking State
+  final ApiService _apiService = ApiService();
   final TextEditingController _userNameController = TextEditingController();
   bool _rankingParticipation = false;
   String? _userId;
+  String _initialUserName = '';
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
-    _userNameController.addListener(_saveUserName);
   }
 
   @override
   void dispose() {
-    _userNameController.removeListener(_saveUserName);
+    _updateSettingsOnExit();
     _userNameController.dispose();
     super.dispose();
+  }
+
+  Future<void> _updateSettingsOnExit() async {
+    final prefs = await SharedPreferences.getInstance();
+    final currentUsername = _userNameController.text;
+
+    // Save username locally
+    await prefs.setString('userName', currentUsername);
+
+    // Sync username with server if it has changed and user is participating
+    if (_rankingParticipation && _userId != null && currentUsername != _initialUserName) {
+      await _apiService.updateUser(_userId!, currentUsername);
+    }
   }
 
   Future<void> _loadPreferences() async {
@@ -60,16 +75,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _isLocked = _changeCount >= 3;
 
     // Load Ranking Settings
-    _userNameController.text = prefs.getString('userName') ?? '';
+    _initialUserName = prefs.getString('userName') ?? '';
+    _userNameController.text = _initialUserName;
     _rankingParticipation = prefs.getBool('rankingParticipation') ?? false;
     _userId = prefs.getString('userId');
 
     setState(() {});
-  }
-
-  Future<void> _saveUserName() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('userName', _userNameController.text);
   }
 
   Future<void> _saveRankingParticipation(bool value) async {
@@ -79,17 +90,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _rankingParticipation = value;
     });
 
+    // First time opting in
     if (value && _userId == null) {
       final newUserId = const Uuid().v4();
       await prefs.setString('userId', newUserId);
       setState(() {
         _userId = newUserId;
       });
+      // Register user on the server
+      await _apiService.updateUser(newUserId, _userNameController.text);
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ランキング用のIDを生成しました')),
+          const SnackBar(content: Text('ランキング用のIDを生成し、ユーザー情報を登録しました')),
         );
       }
+    } else if (value && _userId != null) {
+      // Re-opting in, just sync the current state
+      await _apiService.updateUser(_userId!, _userNameController.text);
     }
   }
 
