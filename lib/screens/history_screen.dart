@@ -163,8 +163,6 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
     return Column(
       children: [
         _buildGoalStatistics(records),
-        const SizedBox(height: 8),
-        _buildScoreAnalysis(records),
       ],
     );
   }
@@ -186,50 +184,6 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
     );
   }
 
-  Widget _buildScoreAnalysis(List<SleepRecord> records) {
-    if (records.length < 2) return const SizedBox.shrink();
-    double calculateAverageScore(List<SleepRecord> list) {
-      if (list.isEmpty) return 0.0;
-      return list.map((r) => r.score).reduce((a, b) => a + b) / list.length;
-    }
-    final achievedRecords = records.where((r) => r.hasAchievedGoal).toList();
-    final notAchievedRecords = records.where((r) => !r.hasAchievedGoal).toList();
-    final didNotOversleepRecords = records.where((r) => r.didNotOversleep).toList();
-    final oversleptRecords = records.where((r) => !r.didNotOversleep).toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('スコア分析', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildAnalysisItem('目標達成時', calculateAverageScore(achievedRecords)),
-              _buildAnalysisItem('未達成時', calculateAverageScore(notAchievedRecords)),
-              _buildAnalysisItem('二度寝なし', calculateAverageScore(didNotOversleepRecords)),
-              _buildAnalysisItem('二度寝あり', calculateAverageScore(oversleptRecords)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisItem(String label, double score) {
-    return Column(
-      children: [
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        Text(
-          score > 0 ? score.toStringAsFixed(1) : '-',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
   Widget _buildWeeklyChart(List<SleepRecord> records) {
     final chartData = _generateWeeklyChartData(records);
     if (chartData.isEmpty) return const Center(child: Text('データがありません'));
@@ -245,7 +199,12 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
+              interval: 1, // ラベルの描画間隔を1に固定
               getTitlesWidget: (value, meta) {
+                // 小数点の値に対してはラベルを描画しないようにする
+                if (value.toInt().toDouble() != value) {
+                  return const Text('');
+                }
                 final day = DateFormat('M/d').format(getLogicalDate(DateTime.now()).subtract(Duration(days: 6 - value.toInt())));
                 return SideTitleWidget(axisSide: meta.axisSide, child: Text(day, style: const TextStyle(fontSize: 10)));
               },
@@ -451,8 +410,6 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
     return Column(
       children: [
         _buildGoalStatistics(records),
-        const SizedBox(height: 8),
-        _buildScoreAnalysis(records),
       ],
     );
   }
@@ -474,50 +431,6 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
     );
   }
 
-  Widget _buildScoreAnalysis(List<SleepRecord> records) {
-    if (records.length < 2) return const SizedBox.shrink();
-    double calculateAverageScore(List<SleepRecord> list) {
-      if (list.isEmpty) return 0.0;
-      return list.map((r) => r.score).reduce((a, b) => a + b) / list.length;
-    }
-    final achievedRecords = records.where((r) => r.hasAchievedGoal).toList();
-    final notAchievedRecords = records.where((r) => !r.hasAchievedGoal).toList();
-    final didNotOversleepRecords = records.where((r) => r.didNotOversleep).toList();
-    final oversleptRecords = records.where((r) => !r.didNotOversleep).toList();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('スコア分析', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildAnalysisItem('目標達成時', calculateAverageScore(achievedRecords)),
-              _buildAnalysisItem('未達成時', calculateAverageScore(notAchievedRecords)),
-              _buildAnalysisItem('二度寝なし', calculateAverageScore(didNotOversleepRecords)),
-              _buildAnalysisItem('二度寝あり', calculateAverageScore(oversleptRecords)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisItem(String label, double score) {
-    return Column(
-      children: [
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        Text(
-          score > 0 ? score.toStringAsFixed(1) : '-',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-      ],
-    );
-  }
-
   Widget _buildMonthlyChart(List<SleepRecord> records, DateTime displayMonth) {
     final chartData = _generateMonthlyChartData(records, displayMonth);
     if (chartData.isEmpty) return const Center(child: Text('データがありません'));
@@ -533,7 +446,12 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
+              interval: 1, // ラベルの描画間隔を1に固定
               getTitlesWidget: (value, meta) {
+                // 小数点の値に対してはラベルを描画しないようにする
+                if (value.toInt().toDouble() != value) {
+                  return const Text('');
+                }
                 final day = value.toInt() + 1;
                 if (day % 5 == 0 || day == 1) {
                   return SideTitleWidget(axisSide: meta.axisSide, child: Text(day.toString(), style: const TextStyle(fontSize: 10)));

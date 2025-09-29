@@ -26,8 +26,8 @@ class SleepRecord {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'sleepTime': sleepTime.toIso8601String(),
-      'wakeUpTime': wakeUpTime.toIso8601String(),
+      'sleepTime': sleepTime.toUtc().toIso8601String(),
+      'wakeUpTime': wakeUpTime.toUtc().toIso8601String(),
       'score': score,
       'performance': performance,
       'hadDaytimeDrowsiness': hadDaytimeDrowsiness ? 1 : 0,

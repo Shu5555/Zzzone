@@ -65,9 +65,9 @@ class DatabaseHelper {
 
   Future<List<SleepRecord>> readAllRecords() async {
     await _ensureInitialized();
-    // データを返す前にソートする
-    _inMemoryDb.sort((a, b) => b.sleepTime.compareTo(a.sleepTime));
-    return List.from(_inMemoryDb);
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.sleepTime.compareTo(a.sleepTime));
+    return sortedList;
   }
 
   Future<int> update(SleepRecord record) async {
@@ -95,15 +95,17 @@ class DatabaseHelper {
   Future<SleepRecord?> getLatestRecord() async {
     await _ensureInitialized();
     if (_inMemoryDb.isEmpty) return null;
-    _inMemoryDb.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
-    return _inMemoryDb.first;
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
+    return sortedList.first;
   }
 
   Future<List<SleepRecord>> getLatestRecords({int limit = 3}) async {
     await _ensureInitialized();
     if (_inMemoryDb.isEmpty) return [];
-    _inMemoryDb.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
-    return _inMemoryDb.take(limit).toList();
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
+    return sortedList.take(limit).toList();
   }
 
   Future close() async {
