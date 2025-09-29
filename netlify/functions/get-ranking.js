@@ -3,7 +3,7 @@ const { createClient } = require('@supabase/supabase-js');
 
 exports.handler = async function(event, context) {
   // 環境変数からSupabaseの情報を取得
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
   // 今日の日付を'YYYY-MM-DD'形式で取得
   const today = new Date().toISOString().slice(0, 10);

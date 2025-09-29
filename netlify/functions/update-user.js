@@ -13,7 +13,7 @@ exports.handler = async function(event, context) {
       return { statusCode: 400, body: 'Missing required fields' };
     }
 
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
     // ユーザーIDをキーにして、ユーザー名が存在すれば更新、なければ新しい行を作成する
     const { data, error } = await supabase
