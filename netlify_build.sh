@@ -6,7 +6,7 @@ set -e
 # Flutter SDKをクローンする
 cd /opt/build
 
-git clone https://github.com/flutter/flutter.git --depth 1 --branch $FLUTTER_VERSION
+git clone https://github.com/flutter/flutter.git --depth 1 --branch stable
 
 # Flutterのパスを通す
 export PATH="$PATH:/opt/build/flutter/bin"

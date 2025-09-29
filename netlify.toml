@@ -3,7 +3,3 @@
   command = "sh ./netlify_build.sh"
   # ビルド後に公開するディレクトリ
   publish = "build/web"
-
-[build.environment]
-  # 使用するFlutterのバージョンを指定
-  FLUTTER_VERSION = "3.22.2"
