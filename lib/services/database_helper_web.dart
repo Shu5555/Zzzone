@@ -28,7 +28,6 @@ class DatabaseHelper {
       _inMemoryDb.addAll(jsonList.map((json) => SleepRecord.fromMap(json as Map<String, dynamic>)));
 
       if (_inMemoryDb.isNotEmpty) {
-        // IDの最大値から次のIDを払い出すように設定
         _idCounter = _inMemoryDb.map((r) => r.id ?? 0).reduce((max, current) => max > current ? max : current) + 1;
       }
     }
@@ -72,7 +71,11 @@ class DatabaseHelper {
 
   Future<SleepRecord?> readRecord(int id) async {
     await _ensureInitialized();
-    return _inMemoryDb.firstWhere((record) => record.id == id, orElse: () => throw Exception('Record not found'));
+    try {
+      return _inMemoryDb.firstWhere((record) => record.id == id);
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<List<SleepRecord>> readAllRecords() async {
@@ -93,3 +96,35 @@ class DatabaseHelper {
     }
     return 0;
   }
+
+  Future<int> delete(int id) async {
+    await _ensureInitialized();
+    final initialLength = _inMemoryDb.length;
+    _inMemoryDb.removeWhere((r) => r.id == id);
+    if (initialLength > _inMemoryDb.length) {
+      await _persistData();
+      return 1;
+    }
+    return 0;
+  }
+
+  Future<SleepRecord?> getLatestRecord() async {
+    await _ensureInitialized();
+    if (_inMemoryDb.isEmpty) return null;
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
+    return sortedList.first;
+  }
+
+  Future<List<SleepRecord>> getLatestRecords({int limit = 3}) async {
+    await _ensureInitialized();
+    if (_inMemoryDb.isEmpty) return [];
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
+    return sortedList.take(limit).toList();
+  }
+
+  Future close() async {
+    // Webでは何もしない
+  }
+}
