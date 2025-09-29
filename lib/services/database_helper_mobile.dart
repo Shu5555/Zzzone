@@ -51,8 +51,14 @@ CREATE TABLE sleep_records (
     final userId = prefs.getString('userId');
 
     if (isRankingEnabled && userId != null) {
+      // 1日の区切りを午前4時とするルールを適用
+      DateTime effectiveDate = record.sleepTime;
+      if (record.sleepTime.hour < 4) {
+        effectiveDate = effectiveDate.subtract(const Duration(days: 1));
+      }
+      final date = DateFormat('yyyy-MM-dd').format(effectiveDate);
       final duration = record.wakeUpTime.difference(record.sleepTime).inMinutes;
-      final date = DateFormat('yyyy-MM-dd').format(record.sleepTime);
+
       await _apiService.submitRecord(userId, duration, date);
     }
   }
