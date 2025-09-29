@@ -210,6 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               controller: _userNameController,
               decoration: const InputDecoration(
                 hintText: 'ランキングに表示される名前',
+                helperText: '公序良俗に反しない名前を設定してください。',
               ),
             ),
           ),
