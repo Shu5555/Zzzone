@@ -51,9 +51,12 @@ CREATE TABLE sleep_records (
     final userId = prefs.getString('userId');
 
     if (isRankingEnabled && userId != null) {
+      // DBから読み込んだUTC時刻を、一度ローカルのタイムゾーンに変換する
+      final localSleepTime = record.sleepTime.toLocal();
+
       // 1日の区切りを午前4時とするルールを適用
-      DateTime effectiveDate = record.sleepTime;
-      if (record.sleepTime.hour < 4) {
+      DateTime effectiveDate = localSleepTime;
+      if (localSleepTime.hour < 4) {
         effectiveDate = effectiveDate.subtract(const Duration(days: 1));
       }
       final date = DateFormat('yyyy-MM-dd').format(effectiveDate);
