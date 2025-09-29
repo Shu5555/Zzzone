@@ -11,7 +11,7 @@ exports.handler = async function(event, context) {
     .select(`
       sleep_duration,
       created_at,
-      users ( id, username )
+      users!left ( id, username )
     `)
     .eq('date', today)
     .order('created_at', { ascending: false });
