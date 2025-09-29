@@ -8,6 +8,7 @@ import '../services/database_helper.dart';
 import '../utils/date_helper.dart';
 import 'post_sleep_input_screen.dart';
 import 'calendar_history_screen.dart';
+import 'analysis_report_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -15,7 +16,7 @@ class HistoryScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('睡眠の履歴'),
@@ -23,6 +24,7 @@ class HistoryScreen extends StatelessWidget {
             tabs: [
               Tab(text: '週表示'),
               Tab(text: '月表示'),
+              Tab(text: '分析レポート'),
             ],
           ),
         ),
@@ -30,6 +32,7 @@ class HistoryScreen extends StatelessWidget {
           children: [
             WeeklyHistoryView(),
             MonthlyHistoryView(),
+            AnalysisReportView(),
           ],
         ),
       ),
