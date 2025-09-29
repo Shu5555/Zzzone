@@ -3,3 +3,6 @@
   command = "sh ./netlify_build.sh"
   # ビルド後に公開するディレクトリ
   publish = "build/web"
+
+[functions]
+  directory = "netlify/functions"

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -11,19 +12,35 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  // Goal Time State
   TimeOfDay _goalTime = const TimeOfDay(hour: 23, minute: 0);
   int _changeCount = 0;
   DateTime? _weekStartDate;
   bool _isLocked = false;
 
+  // Ranking State
+  final TextEditingController _userNameController = TextEditingController();
+  bool _rankingParticipation = false;
+  String? _userId;
+
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+    _userNameController.addListener(_saveUserName);
+  }
+
+  @override
+  void dispose() {
+    _userNameController.removeListener(_saveUserName);
+    _userNameController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
+
+    // Load Goal Time
     final hour = prefs.getInt('goalHour') ?? 23;
     final minute = prefs.getInt('goalMinute') ?? 0;
     _goalTime = TimeOfDay(hour: hour, minute: minute);
@@ -40,9 +57,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
         await prefs.remove('goalTimeChangeWeekStart');
       }
     }
-
     _isLocked = _changeCount >= 3;
+
+    // Load Ranking Settings
+    _userNameController.text = prefs.getString('userName') ?? '';
+    _rankingParticipation = prefs.getBool('rankingParticipation') ?? false;
+    _userId = prefs.getString('userId');
+
     setState(() {});
+  }
+
+  Future<void> _saveUserName() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('userName', _userNameController.text);
+  }
+
+  Future<void> _saveRankingParticipation(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('rankingParticipation', value);
+    setState(() {
+      _rankingParticipation = value;
+    });
+
+    if (value && _userId == null) {
+      final newUserId = const Uuid().v4();
+      await prefs.setString('userId', newUserId);
+      setState(() {
+        _userId = newUserId;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ランキング用のIDを生成しました')),
+        );
+      }
+    }
   }
 
   void _handleTapGoalTimeSetting() {
@@ -132,6 +180,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ],
             ),
             onTap: _handleTapGoalTimeSetting,
+          ),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text('ランキング設定', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          ListTile(
+            title: const Text('ユーザー名'),
+            subtitle: TextField(
+              controller: _userNameController,
+              decoration: const InputDecoration(
+                hintText: 'ランキングに表示される名前',
+              ),
+            ),
+          ),
+          SwitchListTile(
+            title: const Text('ランキングに参加する'),
+            subtitle: const Text('睡眠時間をサーバーに送信し、全国ランキングに参加します'),
+            value: _rankingParticipation,
+            onChanged: _saveRankingParticipation,
           ),
           const Divider(),
           ListTile(
