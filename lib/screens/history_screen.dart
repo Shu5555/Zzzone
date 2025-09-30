@@ -9,6 +9,7 @@ import '../utils/date_helper.dart';
 import 'post_sleep_input_screen.dart';
 import 'calendar_history_screen.dart';
 import 'analysis_report_screen.dart';
+import './manual_sleep_entry_screen.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -20,6 +21,17 @@ class HistoryScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('睡眠の履歴'),
+          actions: [ // ▼▼▼ このactionsプロパティを追加 ▼▼▼
+            IconButton(
+              icon: const Icon(Icons.add),
+              tooltip: '手動で記録を追加',
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const ManualSleepEntryScreen()),
+                );
+              },
+            ),
+          ], // ▲▲▲ ここまで ▲▲▲
           bottom: const TabBar(
             tabs: [
               Tab(text: '週表示'),
