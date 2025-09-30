@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import '../utils/date_helper.dart';
+import '../services/api_service.dart';
 
 class PostSleepInputScreen extends StatefulWidget {
   final DateTime? sleepTime;
@@ -26,6 +27,7 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
   late int _performance;
   late bool _didNotOversleep;
   late final TextEditingController _memoController;
+  bool _isSaving = false; // 保存状態を管理するフラグ
 
   bool get isEditing => widget.initialRecord != null;
 
@@ -52,55 +54,79 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
   }
 
   Future<void> _saveRecord() async {
-    final prefs = await SharedPreferences.getInstance();
-    final goalHour = prefs.getInt('goalHour') ?? 23;
-    final goalMinute = prefs.getInt('goalMinute') ?? 0;
+    if (_isSaving) return; // 保存中なら何もしない
+    setState(() {
+      _isSaving = true;
+    });
 
-    final sleepTime = isEditing ? widget.initialRecord!.sleepTime : widget.sleepTime!;
-    final wakeUpTime = isEditing ? widget.initialRecord!.wakeUpTime : widget.wakeUpTime!;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final goalHour = prefs.getInt('goalHour') ?? 23;
+      final goalMinute = prefs.getInt('goalMinute') ?? 0;
 
-    final logicalSleepDate = getLogicalDate(sleepTime);
-    var targetDateTime = DateTime(logicalSleepDate.year, logicalSleepDate.month, logicalSleepDate.day, goalHour, goalMinute);
+      final sleepTime = isEditing ? widget.initialRecord!.sleepTime : widget.sleepTime!;
+      final wakeUpTime = isEditing ? widget.initialRecord!.wakeUpTime : widget.wakeUpTime!;
 
-    if (goalHour < 4) {
-      targetDateTime = targetDateTime.add(const Duration(days: 1));
-    }
+      final logicalSleepDate = getLogicalDate(sleepTime);
+      var targetDateTime = DateTime(logicalSleepDate.year, logicalSleepDate.month, logicalSleepDate.day, goalHour, goalMinute);
 
-    final startTime = targetDateTime.subtract(const Duration(minutes: 90));
-    final endTime = targetDateTime.add(const Duration(minutes: 30));
-    final bool achieved = !sleepTime.isBefore(startTime) && !sleepTime.isAfter(endTime);
+      if (goalHour < 4) {
+        targetDateTime = targetDateTime.add(const Duration(days: 1));
+      }
 
-    SleepRecord recordToSave;
-    if (isEditing) {
-      recordToSave = SleepRecord(
-        id: widget.initialRecord!.id,
-        sleepTime: widget.initialRecord!.sleepTime,
-        wakeUpTime: widget.initialRecord!.wakeUpTime,
-        score: _score.round(),
-        performance: _performance,
-        hadDaytimeDrowsiness: widget.initialRecord!.hadDaytimeDrowsiness,
-        hasAchievedGoal: achieved,
-        memo: _memoController.text,
-        didNotOversleep: _didNotOversleep,
-      );
-      await DatabaseHelper.instance.update(recordToSave);
-    } else {
-      recordToSave = SleepRecord(
-        sleepTime: widget.sleepTime!,
-        wakeUpTime: widget.wakeUpTime!,
-        score: _score.round(),
-        performance: _performance,
-        hadDaytimeDrowsiness: false,
-        hasAchievedGoal: achieved,
-        memo: _memoController.text,
-        didNotOversleep: _didNotOversleep,
-      );
-      recordToSave = await DatabaseHelper.instance.create(recordToSave);
-    }
+      final startTime = targetDateTime.subtract(const Duration(minutes: 90));
+      final endTime = targetDateTime.add(const Duration(minutes: 30));
+      final bool achieved = !sleepTime.isBefore(startTime) && !sleepTime.isAfter(endTime);
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('記録を保存しました')));
-      Navigator.of(context).pop();
+      SleepRecord recordToSave;
+      if (isEditing) {
+        recordToSave = SleepRecord(
+          id: widget.initialRecord!.id,
+          sleepTime: widget.initialRecord!.sleepTime,
+          wakeUpTime: widget.initialRecord!.wakeUpTime,
+          score: _score.round(),
+          performance: _performance,
+          hadDaytimeDrowsiness: widget.initialRecord!.hadDaytimeDrowsiness,
+          hasAchievedGoal: achieved,
+          memo: _memoController.text,
+          didNotOversleep: _didNotOversleep,
+        );
+        await DatabaseHelper.instance.update(recordToSave);
+      } else {
+        recordToSave = SleepRecord(
+          sleepTime: widget.sleepTime!,
+          wakeUpTime: widget.wakeUpTime!,
+          score: _score.round(),
+          performance: _performance,
+          hadDaytimeDrowsiness: false,
+          hasAchievedGoal: achieved,
+          memo: _memoController.text,
+          didNotOversleep: _didNotOversleep,
+        );
+        recordToSave = await DatabaseHelper.instance.create(recordToSave);
+      }
+
+      final userId = prefs.getString('userId');
+      if (userId != null && userId.isNotEmpty) {
+        final sleepDuration = wakeUpTime.difference(sleepTime).inMinutes;
+        final dateString = getLogicalDateString(sleepTime);
+
+        // ランキングサーバーに記録を送信（エラーはUIには影響させない）
+        ApiService().submitRecord(userId, sleepDuration, dateString);
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('記録を保存しました')));
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      // エラーが発生した場合でもフラグをリセット
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+      }
     }
   }
 
@@ -198,9 +224,15 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
             const SizedBox(height: 40),
             Center(
               child: ElevatedButton(
-                onPressed: _saveRecord,
+                onPressed: _isSaving ? null : _saveRecord,
                 style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20)),
-                child: const Text('記録を保存'),
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('記録を保存'),
               ),
             ),
           ],

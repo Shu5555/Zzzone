@@ -1,9 +1,24 @@
 
 const { createClient } = require('@supabase/supabase-js');
 
+// JST基準で「論理的な日付」を取得するヘルパー関数
+function getLogicalDateInJST() {
+  const now = new Date();
+  // タイムゾーンオフセットを考慮してJSTに変換 (UTC+9)
+  const jstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+
+  // JSTの午前4時より前なら、日付を1日前に設定
+  if (jstNow.getUTCHours() < 4) {
+    jstNow.setUTCDate(jstNow.getUTCDate() - 1);
+  }
+
+  // YYYY-MM-DD形式で日付を返す
+  return jstNow.toISOString().slice(0, 10);
+}
+
 exports.handler = async function(event, context) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getLogicalDateInJST(); // <--- ヘルパー関数を呼び出す
 
   // 1. 今日のレコードをすべて、作成時刻の新しい順に取得する
   const { data: records, error } = await supabase

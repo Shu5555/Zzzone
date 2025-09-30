@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 /// 睡眠記録が属する「論理的な日付」を取得します。
 ///
@@ -10,4 +11,11 @@ DateTime getLogicalDate(DateTime dateTime) {
       ? localDateTime.subtract(const Duration(days: 1))
       : localDateTime;
   return DateUtils.dateOnly(logicalDate);
+}
+
+/// 睡眠記録が属する「論理的な日付」を YYYY-MM-DD 形式の文字列で取得します。
+/// API通信での利用を想定しています。
+String getLogicalDateString(DateTime dateTime) {
+  final logicalDate = getLogicalDate(dateTime);
+  return DateFormat('yyyy-MM-dd').format(logicalDate);
 }

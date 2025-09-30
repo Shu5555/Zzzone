@@ -17,7 +17,7 @@ exports.handler = async function(event, context) {
 
     const { data, error } = await supabase
       .from('sleep_records')
-      .insert([{ user_id, sleep_duration, date }]);
+      .upsert({ user_id, sleep_duration, date }, { onConflict: 'user_id, date' });
 
     if (error) {
       throw error;
