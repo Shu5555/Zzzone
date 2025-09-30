@@ -13,6 +13,10 @@ exports.handler = async function(event, context) {
       return { statusCode: 400, body: 'Missing required fields' };
     }
 
+    if (username.length > 20) {
+      return { statusCode: 400, body: 'Username cannot be longer than 20 characters' };
+    }
+
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
     // ユーザーIDをキーにして、ユーザー名が存在すれば更新、なければ新しい行を作成する

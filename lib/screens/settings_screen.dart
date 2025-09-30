@@ -208,6 +208,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('ユーザー名'),
             subtitle: TextField(
               controller: _userNameController,
+              maxLength: 20, // 20文字に制限
               decoration: const InputDecoration(
                 hintText: 'ランキングに表示される名前',
                 helperText: '公序良俗に反しない名前を設定してください。',
