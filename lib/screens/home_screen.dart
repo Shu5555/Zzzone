@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import 'post_sleep_input_screen.dart';
@@ -18,6 +19,8 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  static const String _sleepStartTimeKey = 'sleep_start_time';
+
   bool _isSleeping = false;
   DateTime? _sleepStartTime;
   Timer? _timer;
@@ -28,32 +31,38 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSleepSession();
     _updateTopArea();
+  }
+
+  Future<void> _loadSleepSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    final startTimeString = prefs.getString(_sleepStartTimeKey);
+    if (startTimeString != null) {
+      setState(() {
+        _sleepStartTime = DateTime.parse(startTimeString);
+        _isSleeping = true;
+      });
+      _startTimer();
+    }
   }
 
   Future<void> _updateTopArea() async {
     try {
-      // デフォルトで名言をセット
       final String jsonString = await rootBundle.loadString('assets/data/quotes.json');
       final List<dynamic> quotesList = jsonDecode(jsonString);
-
-      // 1日の区切りを午前4時にするため、4時より前は前日の日付として扱う
       final now = DateTime.now();
       final effectiveDate = now.hour < 4 ? now.subtract(const Duration(days: 1)) : now;
       final dayOfYear = effectiveDate.difference(DateTime(effectiveDate.year, 1, 1)).inDays;
-
       if (quotesList.isNotEmpty) {
         final quoteIndex = dayOfYear % quotesList.length;
         final quoteData = quotesList[quoteIndex] as Map<String, dynamic>;
         _dailyQuote = quoteData['quote'] as String? ?? '';
         _dailyQuoteAuthor = quoteData['author'] as String? ?? '';
       }
-
-      // 直近3件の記録からアドバイスを生成
       final recentRecords = await DatabaseHelper.instance.getLatestRecords(limit: 3);
       if (recentRecords.length == 3) {
         final averageScore = recentRecords.map((r) => r.score).reduce((a, b) => a + b) / 3;
-        // 3日に1回、またはスコアに特徴があればアドバイス
         if (dayOfYear % 3 == 0 || averageScore <= 4 || averageScore >= 8) {
           if (averageScore <= 4) {
             _dailyQuote = '最近、スコアが低い日が続いていますね。今夜は少し早めに休んでみてはいかがでしょうか？';
@@ -68,7 +77,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _dailyQuote = '今日を素晴らしい一日に。';
       _dailyQuoteAuthor = 'Zzzone';
     }
-
     if (mounted) {
       setState(() {});
     }
@@ -88,7 +96,6 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
-
     final newDrowsinessState = !latestRecord.hadDaytimeDrowsiness;
     final updatedRecord = SleepRecord(
       id: latestRecord.id,
@@ -102,7 +109,6 @@ class _HomeScreenState extends State<HomeScreen> {
       didNotOversleep: latestRecord.didNotOversleep,
     );
     await DatabaseHelper.instance.update(updatedRecord);
-
     if (mounted) {
       final message = newDrowsinessState ? '今日の眠気を記録しました' : '眠気の記録を取り消しました';
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
@@ -120,18 +126,21 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _startSleeping() {
+  void _startSleeping() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
       _isSleeping = true;
       _sleepStartTime = DateTime.now();
     });
+    await prefs.setString(_sleepStartTimeKey, _sleepStartTime!.toIso8601String());
     _startTimer();
   }
 
   void _stopSleeping() async {
+    final prefs = await SharedPreferences.getInstance();
     _timer?.cancel();
     final wakeUpTime = DateTime.now();
-
+    await prefs.remove(_sleepStartTimeKey);
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => PostSleepInputScreen(
@@ -140,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-    _updateTopArea(); // 記録保存後に表示を更新
+    _updateTopArea();
     setState(() {
       _isSleeping = false;
       _sleepStartTime = null;
@@ -152,14 +161,14 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const HistoryScreen()),
     );
-    _updateTopArea(); // 履歴画面から戻ってきたときも表示を更新
+    _updateTopArea();
   }
 
   void _navigateToSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
-    _updateTopArea(); // 設定画面から戻ってきたときも表示を更新
+    _updateTopArea();
   }
 
   String _formatDuration(Duration duration) {
