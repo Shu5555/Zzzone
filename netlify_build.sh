@@ -20,5 +20,8 @@ cd $OLDPWD
 # 依存パッケージを取得
 flutter pub get
 
+# Netlifyの環境変数から .env ファイルを生成
+echo "GEMINI_API_KEY=$GEMINI_API_KEY" > .env
+
 # Webアプリをビルド
 flutter build web
