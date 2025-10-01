@@ -74,4 +74,14 @@ class SleepRecord {
       didNotOversleep: map['didNotOversleep'] == 1, // 追加
     );
   }
+
+  Map<String, dynamic> toMapForAnalysis() {
+    return {
+      'sleepTime': sleepTime.toIso8601String(),
+      'durationInMinutes': duration.inMinutes,
+      'score': score,
+      'performance': performance,
+      'memo': memo,
+    };
+  }
 }

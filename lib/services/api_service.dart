@@ -1,8 +1,10 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:async'; // TimeoutExceptionのため
 
 class ApiService {
   final String _baseUrl = 'https://zzzone.netlify.app/.netlify/functions';
+  final _timeoutDuration = const Duration(seconds: 10);
 
   /// ユーザー情報を更新または作成する
   Future<void> updateUser(String id, String username) async {
@@ -11,13 +13,17 @@ class ApiService {
         Uri.parse('$_baseUrl/update-user'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'id': id, 'username': username}),
-      );
+      ).timeout(_timeoutDuration);
+
       if (response.statusCode != 200) {
-        // エラーハンドリング（例: ログ出力）
-        print('Failed to update user: ${response.body}');
+        // エラーハンドリングを強化
+        throw Exception('Failed to update user: ${response.statusCode} ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('Connection timed out. Please try again.');
     } catch (e) {
-      print('Error calling updateUser: $e');
+      // 呼び出し元で処理できるように再スロー
+      rethrow;
     }
   }
 
@@ -32,30 +38,35 @@ class ApiService {
           'sleep_duration': sleepDuration,
           'date': date,
         }),
-      );
+      ).timeout(_timeoutDuration);
+
       if (response.statusCode != 201) {
-        print('Failed to submit record: ${response.body}');
+        throw Exception('Failed to submit record: ${response.statusCode} ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('Connection timed out. Please try again.');
     } catch (e) {
-      print('Error calling submitRecord: $e');
+      rethrow;
     }
   }
 
   /// ランキングデータを取得する
-  Future<List<Map<String, dynamic>>> getRanking() async {
+  Future<List<Map<String, dynamic>>> getRanking(String date) async {
     try {
-      final response = await http.get(Uri.parse('$_baseUrl/get-ranking'));
+      final uri = Uri.parse('$_baseUrl/get-ranking?date=$date');
+      final response = await http.get(uri).timeout(_timeoutDuration);
       if (response.statusCode == 200) {
         // UTF-8でデコードしてからJSONをパースする
         final List<dynamic> data = jsonDecode(utf8.decode(response.bodyBytes));
         return data.cast<Map<String, dynamic>>();
       } else {
-        print('Failed to get ranking: ${response.body}');
-        return [];
+        // エラー時は空リストではなく例外をスロー
+        throw Exception('Failed to get ranking: ${response.statusCode} ${response.body}');
       }
+    } on TimeoutException {
+      throw Exception('Connection timed out. Please try again.');
     } catch (e) {
-      print('Error calling getRanking: $e');
-      return [];
+      rethrow;
     }
   }
 }

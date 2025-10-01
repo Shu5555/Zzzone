@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import '../utils/date_helper.dart'; // Import the date helper
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -14,7 +15,8 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-    _rankingFuture = ApiService().getRanking();
+    // Pass today's logical date to the getRanking method
+    _rankingFuture = ApiService().getRanking(getLogicalDateString(DateTime.now()));
   }
 
   String _formatDuration(int totalMinutes) {

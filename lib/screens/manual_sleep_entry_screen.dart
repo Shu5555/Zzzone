@@ -51,41 +51,47 @@ class _ManualSleepEntryScreenState extends State<ManualSleepEntryScreen> {
   }
 
   Future<void> _saveRecord() async {
+    // Check for duplicates before saving
+    final logicalDateToSave = getLogicalDate(_selectedDate);
+    final allRecords = await DatabaseHelper.instance.readAllRecords();
+    final isDuplicate = allRecords.any((record) => getLogicalDate(record.sleepTime) == logicalDateToSave);
+
+    if (isDuplicate) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('この日付の記録は既に存在します。履歴画面から編集してください。')),
+        );
+      }
+      return;
+    }
+
     final totalMinutes = _selectedHours * 60 + _selectedMinutes;
     if (totalMinutes <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('睡眠時間は0より大きくしてください。')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('睡眠時間は0より大きくしてください。')),
+        );
+      }
       return;
     }
 
     final sleepTime = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 0, 0);
     final wakeUpTime = sleepTime.add(Duration(minutes: totalMinutes));
 
-    // ▼▼▼ 入力値を使ってSleepRecordを生成 ▼▼▼
     final newRecord = SleepRecord(
       sleepTime: sleepTime,
       wakeUpTime: wakeUpTime,
       score: _score.round(),
       performance: _performance,
-      hadDaytimeDrowsiness: false, // この項目は手動入力画面にないためデフォルト値
-      hasAchievedGoal: false, // 目標達成は自動計算されないためデフォルト値
+      hadDaytimeDrowsiness: false, 
+      hasAchievedGoal: false, 
       memo: _memoController.text,
       didNotOversleep: _didNotOversleep,
     );
 
     await DatabaseHelper.instance.create(newRecord);
 
-    final logicalTodayString = getLogicalDateString(DateTime.now());
-    final selectedDateString = getLogicalDateString(_selectedDate);
 
-    if (logicalTodayString == selectedDateString) {
-      final prefs = await SharedPreferences.getInstance();
-      final userId = prefs.getString('userId');
-      if (userId != null && userId.isNotEmpty) {
-        ApiService().submitRecord(userId, totalMinutes, selectedDateString);
-      }
-    }
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

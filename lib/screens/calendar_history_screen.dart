@@ -95,6 +95,9 @@ class _CalendarHistoryScreenState extends State<CalendarHistoryScreen> {
                 onPageChanged: (focusedDay) {
                   _focusedDay = focusedDay;
                 },
+                headerStyle: const HeaderStyle(
+                  formatButtonVisible: false,
+                ),
                 calendarBuilders: CalendarBuilders(markerBuilder: (context, day, events) {
                   if (events.isEmpty) return null;
                   return _buildDonutChart(day, events);

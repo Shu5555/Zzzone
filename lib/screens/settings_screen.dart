@@ -48,7 +48,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     // Sync username with server if it has changed and user is participating
     if (_rankingParticipation && _userId != null && currentUsername != _initialUserName) {
-      await _apiService.updateUser(_userId!, currentUsername);
+      try {
+        await _apiService.updateUser(_userId!, currentUsername);
+      } catch (e) {
+        // Since this happens on exit, we can't easily show a snackbar.
+        // Logging the error is the most practical approach.
+        print('Failed to update username on exit: $e');
+      }
     }
   }
 
@@ -90,24 +96,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _rankingParticipation = value;
     });
 
-    // First time opting in
-    if (value && _userId == null) {
-      final newUserId = const Uuid().v4();
-      await prefs.setString('userId', newUserId);
-      setState(() {
-        _userId = newUserId;
-      });
-      // Register user on the server
-      await _apiService.updateUser(newUserId, _userNameController.text);
+    // Wrap API calls in try-catch
+    try {
+      // First time opting in
+      if (value && _userId == null) {
+        final newUserId = const Uuid().v4();
+        await prefs.setString('userId', newUserId);
+        setState(() {
+          _userId = newUserId;
+        });
+        // Register user on the server
+        await _apiService.updateUser(newUserId, _userNameController.text);
 
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ランキング用のIDを生成し、ユーザー情報を登録しました')),
+          );
+        }
+      } else if (value && _userId != null) {
+        // Re-opting in, just sync the current state
+        await _apiService.updateUser(_userId!, _userNameController.text);
+      }
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ランキング用のIDを生成し、ユーザー情報を登録しました')),
+          SnackBar(content: Text('エラー: ユーザー情報の更新に失敗しました。\n${e.toString()}')),
         );
+        // Revert the switch state on failure
+        setState(() {
+          _rankingParticipation = !value;
+        });
+        await prefs.setBool('rankingParticipation', !value);
       }
-    } else if (value && _userId != null) {
-      // Re-opting in, just sync the current state
-      await _apiService.updateUser(_userId!, _userNameController.text);
     }
   }
 

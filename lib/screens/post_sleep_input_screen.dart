@@ -106,14 +106,7 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
         recordToSave = await DatabaseHelper.instance.create(recordToSave);
       }
 
-      final userId = prefs.getString('userId');
-      if (userId != null && userId.isNotEmpty) {
-        final sleepDuration = wakeUpTime.difference(sleepTime).inMinutes;
-        final dateString = getLogicalDateString(sleepTime);
 
-        // ランキングサーバーに記録を送信（エラーはUIには影響させない）
-        ApiService().submitRecord(userId, sleepDuration, dateString);
-      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('記録を保存しました')));

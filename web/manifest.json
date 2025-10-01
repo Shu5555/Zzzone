@@ -1,6 +1,6 @@
 {
-    "name": "sleep_management_app",
-    "short_name": "sleep_management_app",
+    "name": "Zzzone",
+    "short_name": "Zzzone",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

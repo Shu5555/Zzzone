@@ -1,8 +1,7 @@
-
 const { createClient } = require('@supabase/supabase-js');
 
-// JST基準で「論理的な日付」を取得するヘルパー関数
-function getLogicalDateInJST() {
+// フォールバックとしてJST基準の「論理的な日付」を取得するヘルパー関数
+function getFallbackDateInJST() {
   const now = new Date();
   // タイムゾーンオフセットを考慮してJSTに変換 (UTC+9)
   const jstNow = new Date(now.getTime() + (9 * 60 * 60 * 1000));
@@ -18,9 +17,19 @@ function getLogicalDateInJST() {
 
 exports.handler = async function(event, context) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
-  const today = getLogicalDateInJST(); // <--- ヘルパー関数を呼び出す
+  
+  let targetDate;
+  const clientDate = event.queryStringParameters?.date;
+  const dateFormat = /^\d{4}-\d{2}-\d{2}$/;
 
-  // 1. 今日のレコードをすべて、作成時刻の新しい順に取得する
+  if (clientDate && dateFormat.test(clientDate)) {
+    targetDate = clientDate;
+  } else {
+    // クライアントから日付が指定されない場合はJSTをフォールバックとして使用
+    targetDate = getFallbackDateInJST();
+  }
+
+  // 1. 対象日のレコードをすべて、作成時刻の新しい順に取得する
   const { data: records, error } = await supabase
     .from('sleep_records')
     .select(`
@@ -28,7 +37,7 @@ exports.handler = async function(event, context) {
       created_at,
       users!left ( id, username )
     `)
-    .eq('date', today)
+    .eq('date', targetDate)
     .order('created_at', { ascending: false });
 
   if (error) {
