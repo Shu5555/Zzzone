@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/sleep_record.dart';
 
 class AnalysisService {
-  // APIキーをアプリ内に直接記述します。非常に危険なため、取り扱いには最大限の注意を払ってください。
-  static const String _apiKey = 'AIzaSyDLlZP3_4cZPfGw9sNsEgG0-7G6VLuwLwU';
+  static final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
   static const String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
   // LLMの応答は時間がかかる可能性があるため、タイムアウトを60秒に設定
