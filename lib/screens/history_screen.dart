@@ -94,37 +94,88 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
         final today = getLogicalDate(DateTime.now());
         final recordsForDisplay = allRecords.where((r) => today.difference(getLogicalDate(r.sleepTime)).inDays < 7).toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text('過去7日間の睡眠時間', style: Theme.of(context).textTheme.titleLarge),
-            ),
-            AspectRatio(
-              aspectRatio: 1.7,
-              child: recordsForDisplay.isEmpty
-                  ? const Center(child: Text('データなし'))
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildWeeklyChart(recordsForDisplay),
-                    ),
-            ),
-            const Divider(),
-            _buildStatistics(recordsForDisplay),
-            const Divider(),
-            Expanded(
-              child: ListView.builder(
-                itemCount: recordsForDisplay.length,
-                itemBuilder: (context, index) {
-                  final record = recordsForDisplay[index];
-                  return _buildRecordTile(record);
-                },
-              ),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 600) {
+              return _buildCompactLayout(context, recordsForDisplay);
+            } else {
+              return _buildWideLayout(context, recordsForDisplay);
+            }
+          },
         );
       },
+    );
+  }
+
+  Widget _buildCompactLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text('過去7日間の睡眠時間', style: Theme.of(context).textTheme.titleLarge),
+        ),
+        AspectRatio(
+          aspectRatio: 1.7,
+          child: recordsForDisplay.isEmpty
+              ? const Center(child: Text('データなし'))
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildWeeklyChart(recordsForDisplay),
+                ),
+        ),
+        const Divider(),
+        _buildStatistics(recordsForDisplay),
+        const Divider(),
+        Expanded(
+          child: ListView.builder(
+            itemCount: recordsForDisplay.length,
+            itemBuilder: (context, index) {
+              final record = recordsForDisplay[index];
+              return _buildRecordTile(record);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWideLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('過去7日間の睡眠時間', style: Theme.of(context).textTheme.titleLarge),
+                AspectRatio(
+                  aspectRatio: 1.7,
+                  child: recordsForDisplay.isEmpty
+                      ? const Center(child: Text('データなし'))
+                      : _buildWeeklyChart(recordsForDisplay),
+                ),
+                const Divider(),
+                _buildStatistics(recordsForDisplay),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(width: 1, thickness: 1),
+        Expanded(
+          flex: 3,
+          child: ListView.builder(
+            itemCount: recordsForDisplay.length,
+            itemBuilder: (context, index) {
+              final record = recordsForDisplay[index];
+              return _buildRecordTile(record);
+            },
+          ),
+        ),
+      ],
     );
   }
   
@@ -323,55 +374,125 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
         final allRecords = snapshot.data!;
         final recordsForDisplay = allRecords.where((r) => getLogicalDate(r.sleepTime).year == _displayMonth.year && getLogicalDate(r.sleepTime).month == _displayMonth.month).toList();
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                IconButton(icon: const Icon(Icons.arrow_left), onPressed: () => _changeMonth(-1)),
-                Text(DateFormat.yMMM('ja_JP').format(_displayMonth), style: Theme.of(context).textTheme.titleLarge),
-                IconButton(icon: const Icon(Icons.arrow_right), onPressed: () => _changeMonth(1)),
-              ],
-            ),
-            AspectRatio(
-              aspectRatio: 1.7,
-              child: recordsForDisplay.isEmpty
-                  ? const Center(child: Text('データなし'))
-                  : Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: _buildMonthlyChart(recordsForDisplay, _displayMonth),
-                    ),
-            ),
-            const Divider(),
-            _buildStatistics(recordsForDisplay),
-            const Divider(),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const CalendarHistoryScreen()),
-                    );
-                  },
-                  child: const Text('カレンダーで全て見る >'),
-                ),
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                itemCount: recordsForDisplay.length,
-                itemBuilder: (context, index) {
-                  final record = recordsForDisplay[index];
-                  return _buildRecordTile(record);
-                },
-              ),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            if (constraints.maxWidth < 600) {
+              return _buildCompactLayout(context, recordsForDisplay);
+            } else {
+              return _buildWideLayout(context, recordsForDisplay);
+            }
+          },
         );
       },
+    );
+  }
+
+  Widget _buildCompactLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            IconButton(icon: const Icon(Icons.arrow_left), onPressed: () => _changeMonth(-1)),
+            Text(DateFormat.yMMM('ja_JP').format(_displayMonth), style: Theme.of(context).textTheme.titleLarge),
+            IconButton(icon: const Icon(Icons.arrow_right), onPressed: () => _changeMonth(1)),
+          ],
+        ),
+        AspectRatio(
+          aspectRatio: 1.7,
+          child: recordsForDisplay.isEmpty
+              ? const Center(child: Text('データなし'))
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: _buildMonthlyChart(recordsForDisplay, _displayMonth),
+                ),
+        ),
+        const Divider(),
+        _buildStatistics(recordsForDisplay),
+        const Divider(),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const CalendarHistoryScreen()),
+                );
+              },
+              child: const Text('カレンダーで全て見る >'),
+            ),
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            itemCount: recordsForDisplay.length,
+            itemBuilder: (context, index) {
+              final record = recordsForDisplay[index];
+              return _buildRecordTile(record);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWideLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(icon: const Icon(Icons.arrow_left), onPressed: () => _changeMonth(-1)),
+                    Text(DateFormat.yMMM('ja_JP').format(_displayMonth), style: Theme.of(context).textTheme.titleLarge),
+                    IconButton(icon: const Icon(Icons.arrow_right), onPressed: () => _changeMonth(1)),
+                  ],
+                ),
+                AspectRatio(
+                  aspectRatio: 1.7,
+                  child: recordsForDisplay.isEmpty
+                      ? const Center(child: Text('データなし'))
+                      : _buildMonthlyChart(recordsForDisplay, _displayMonth),
+                ),
+                const Divider(),
+                _buildStatistics(recordsForDisplay),
+                const Divider(),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const CalendarHistoryScreen()),
+                      );
+                    },
+                    child: const Text('カレンダーで全て見る >'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const VerticalDivider(width: 1, thickness: 1),
+        Expanded(
+          flex: 3,
+          child: ListView.builder(
+            itemCount: recordsForDisplay.length,
+            itemBuilder: (context, index) {
+              final record = recordsForDisplay[index];
+              return _buildRecordTile(record);
+            },
+          ),
+        ),
+      ],
     );
   }
 

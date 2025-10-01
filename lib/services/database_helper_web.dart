@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/sleep_record.dart';
 import './api_service.dart';
+import '../utils/date_helper.dart';
 
 // Web用のインメモリデータベースヘルパー（shared_preferencesで永続化）
 class DatabaseHelper {
@@ -122,6 +123,18 @@ class DatabaseHelper {
     final sortedList = List<SleepRecord>.from(_inMemoryDb);
     sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
     return sortedList.take(limit).toList();
+  }
+
+  Future<SleepRecord?> getRecordForDate(DateTime date) async {
+    await _ensureInitialized();
+    final targetLogicalDate = getLogicalDate(date);
+
+    for (var record in _inMemoryDb) {
+      if (getLogicalDate(record.sleepTime) == targetLogicalDate) {
+        return record;
+      }
+    }
+    return null;
   }
 
   Future close() async {

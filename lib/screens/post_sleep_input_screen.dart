@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import '../utils/date_helper.dart';
-import '../services/api_service.dart';
 
 class PostSleepInputScreen extends StatefulWidget {
   final DateTime? sleepTime;
@@ -27,7 +27,8 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
   late int _performance;
   late bool _didNotOversleep;
   late final TextEditingController _memoController;
-  bool _isSaving = false; // 保存状態を管理するフラグ
+  bool _isSaving = false;
+  bool _isShareable = false;
 
   bool get isEditing => widget.initialRecord != null;
 
@@ -39,6 +40,14 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
       _performance = widget.initialRecord!.performance;
       _didNotOversleep = widget.initialRecord!.didNotOversleep;
       _memoController = TextEditingController(text: widget.initialRecord!.memo);
+
+      final recordDate = getLogicalDateString(widget.initialRecord!.sleepTime);
+      final today = getLogicalDateString(DateTime.now());
+      if (recordDate == today) {
+        setState(() {
+          _isShareable = true;
+        });
+      }
     } else {
       _score = 5.0;
       _performance = 2;
@@ -54,7 +63,7 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
   }
 
   Future<void> _saveRecord() async {
-    if (_isSaving) return; // 保存中なら何もしない
+    if (_isSaving) return;
     setState(() {
       _isSaving = true;
     });
@@ -106,14 +115,11 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
         recordToSave = await DatabaseHelper.instance.create(recordToSave);
       }
 
-
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('記録を保存しました')));
         Navigator.of(context).pop();
       }
     } catch (e) {
-      // エラーが発生した場合でもフラグをリセット
       if (mounted) {
         setState(() {
           _isSaving = false;
@@ -148,12 +154,35 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
     }
   }
 
+  Future<void> _shareSleepRecord() async {
+    if (widget.initialRecord == null) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final username = prefs.getString('userName') ?? '名無しのズーマー';
+
+    final duration = widget.initialRecord!.wakeUpTime.difference(widget.initialRecord!.sleepTime);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+
+    final text = 
+        '**$username** は **${hours}時間${minutes}分** 寝ました！\nあなたも睡眠を管理しよう。';
+    const url = 'https://zzzone.netlify.app';
+
+    await Share.share('$text\n$url');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(isEditing ? '記録の編集' : '睡眠の評価'),
         actions: [
+          if (_isShareable)
+            IconButton(
+              icon: const Icon(Icons.share),
+              onPressed: _shareSleepRecord,
+              tooltip: '睡眠記録を共有',
+            ),
           if (isEditing)
             IconButton(icon: const Icon(Icons.delete_outline), onPressed: _deleteRecord),
         ],

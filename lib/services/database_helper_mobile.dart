@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import '../models/sleep_record.dart';
 import './api_service.dart';
+import '../utils/date_helper.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -51,18 +52,17 @@ CREATE TABLE sleep_records (
     final userId = prefs.getString('userId');
 
     if (isRankingEnabled && userId != null) {
-      // DBから読み込んだUTC時刻を、一度ローカルのタイムゾーンに変換する
-      final localSleepTime = record.sleepTime.toLocal();
-
-      // 1日の区切りを午前4時とするルールを適用
-      DateTime effectiveDate = localSleepTime;
-      if (localSleepTime.hour < 4) {
-        effectiveDate = effectiveDate.subtract(const Duration(days: 1));
+      final sleepTime = record.sleepTime;
+      var effectiveDate = sleepTime;
+      if (sleepTime.hour < 4) {
+        effectiveDate = sleepTime.subtract(const Duration(days: 1));
       }
       final date = DateFormat('yyyy-MM-dd').format(effectiveDate);
       final duration = record.wakeUpTime.difference(record.sleepTime).inMinutes;
 
-      await _apiService.submitRecord(userId, duration, date);
+      if (duration > 0) {
+        await _apiService.submitRecord(userId, duration, date);
+      }
     }
   }
 
@@ -146,6 +146,19 @@ CREATE TABLE sleep_records (
       limit: limit,
     );
     return result.map((json) => SleepRecord.fromMap(json)).toList();
+  }
+
+  Future<SleepRecord?> getRecordForDate(DateTime date) async {
+    final db = await instance.database;
+    final allRecords = await readAllRecords();
+    final targetLogicalDate = getLogicalDate(date);
+
+    for (var record in allRecords) {
+      if (getLogicalDate(record.sleepTime) == targetLogicalDate) {
+        return record;
+      }
+    }
+    return null;
   }
 
   Future close() async {

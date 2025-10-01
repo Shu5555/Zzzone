@@ -28,21 +28,37 @@ class _HomeScreenState extends State<HomeScreen> {
   String _dailyQuote = '';
   String _dailyQuoteAuthor = '';
 
+  SleepRecord? _todayRecord;
+  bool _isDrowsinessRecordable = false;
+
   @override
   void initState() {
     super.initState();
-    _loadSleepSession();
-    _updateTopArea();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    await _loadSleepSession();
+    await _updateTopArea();
+    final record = await DatabaseHelper.instance.getRecordForDate(DateTime.now());
+    if (mounted) {
+      setState(() {
+        _todayRecord = record;
+        _isDrowsinessRecordable = record != null && !record.hadDaytimeDrowsiness;
+      });
+    }
   }
 
   Future<void> _loadSleepSession() async {
     final prefs = await SharedPreferences.getInstance();
     final startTimeString = prefs.getString(_sleepStartTimeKey);
     if (startTimeString != null) {
-      setState(() {
-        _sleepStartTime = DateTime.parse(startTimeString);
-        _isSleeping = true;
-      });
+      if (mounted) {
+        setState(() {
+          _sleepStartTime = DateTime.parse(startTimeString);
+          _isSleeping = true;
+        });
+      }
       _startTimer();
     }
   }
@@ -89,29 +105,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _recordDrowsiness() async {
-    final latestRecord = await DatabaseHelper.instance.getLatestRecord();
-    if (latestRecord == null) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('まだ睡眠記録がありません')));
-      }
-      return;
-    }
-    final newDrowsinessState = !latestRecord.hadDaytimeDrowsiness;
-    final updatedRecord = SleepRecord(
-      id: latestRecord.id,
-      sleepTime: latestRecord.sleepTime,
-      wakeUpTime: latestRecord.wakeUpTime,
-      score: latestRecord.score,
-      performance: latestRecord.performance,
-      hadDaytimeDrowsiness: newDrowsinessState,
-      hasAchievedGoal: latestRecord.hasAchievedGoal,
-      memo: latestRecord.memo,
-      didNotOversleep: latestRecord.didNotOversleep,
-    );
+    if (_todayRecord == null) return;
+
+    final updatedRecord = _todayRecord!.copyWith(hadDaytimeDrowsiness: true);
     await DatabaseHelper.instance.update(updatedRecord);
+
     if (mounted) {
-      final message = newDrowsinessState ? '今日の眠気を記録しました' : '眠気の記録を取り消しました';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      setState(() {
+        _todayRecord = updatedRecord;
+        _isDrowsinessRecordable = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('昼間の眠気を記録しました。')),
+      );
     }
   }
 
@@ -149,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-    _updateTopArea();
+    _loadData();
     setState(() {
       _isSleeping = false;
       _sleepStartTime = null;
@@ -161,14 +167,14 @@ class _HomeScreenState extends State<HomeScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const HistoryScreen()),
     );
-    _updateTopArea();
+    _loadData();
   }
 
   void _navigateToSettings() async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => const SettingsScreen()),
     );
-    _updateTopArea();
+    _loadData();
   }
 
   String _formatDuration(Duration duration) {
@@ -236,13 +242,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20), textStyle: const TextStyle(fontSize: 20)),
                     onPressed: _startSleeping,
                   ),
-            if (!_isSleeping)
+            if (!_isSleeping && _todayRecord != null)
               Padding(
                 padding: const EdgeInsets.only(top: 20.0),
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.cloudy_snowing),
-                  label: const Text('今日の眠気を記録'),
-                  onPressed: _recordDrowsiness,
+                child: ElevatedButton(
+                  onPressed: _isDrowsinessRecordable ? _recordDrowsiness : null,
+                  child: Text(
+                    _isDrowsinessRecordable ? '昼間の眠気を記録' : '眠気は記録済み',
+                  ),
                 ),
               ),
           ],
