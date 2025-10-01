@@ -104,7 +104,7 @@ flutter build apk --release
 ## 開発者情報
 - **アプリ名:** Zzzone（ズォーン）
 - **制作者名:** kou09427
-- **共同編集:** Gemini-1.5-pro
+- **共同編集:** Gemini-2.5-pro
 - **制作協力/アイコン制作:** syuu55
 - **対応端末:** Android, Web
 
