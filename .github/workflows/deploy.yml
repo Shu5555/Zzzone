@@ -26,11 +26,15 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      - name: Create .env file for GEMINI_API_KEY
-        run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # GitHub Secrets から API キーを取得
-
+                - name: Create .env file for API Keys
+                  run: |
+                    echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+                    echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+                    echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
+                  env:
+                    GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+                    SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+                    SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
       - name: Build Flutter Web
         run: flutter build web --release --base-href /Zzzone/ # リポジトリ名に合わせて変更
 
