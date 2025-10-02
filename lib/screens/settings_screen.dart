@@ -221,7 +221,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed == true) {
       try {
-        await _supabaseRankingService.deleteUserRankingData(_userId!);
+        await _supabaseRankingService.deleteAllSleepRecords(_userId!); // まず睡眠記録を削除
+        await _supabaseRankingService.deleteUserRankingData(_userId!); // その後ユーザーを削除
         final prefs = await SharedPreferences.getInstance();
         await prefs.remove('userId');
         await prefs.setBool('rankingParticipation', false);
