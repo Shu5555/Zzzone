@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 import '../services/api_service.dart';
+import '../services/supabase_ranking_service.dart'; // Add this import
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Ranking State
   final ApiService _apiService = ApiService();
+  final SupabaseRankingService _supabaseRankingService = SupabaseRankingService(); // Add this
   final TextEditingController _userNameController = TextEditingController();
   bool _rankingParticipation = false;
   String? _userId;
@@ -196,6 +198,93 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  // 新規追加: ランキングデータを削除する関数
+  Future<void> _deleteRankingData() async {
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('エラー: ユーザーIDが見つかりません。')),
+      );
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('ランキングデータを削除しますか？'),
+        content: const Text('この操作は元に戻せません。ランキングからあなたのデータが完全に削除されます。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('削除する'), style: TextButton.styleFrom(foregroundColor: Colors.red)),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _supabaseRankingService.deleteUserRankingData(_userId!);
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('userId');
+        await prefs.setBool('rankingParticipation', false);
+        setState(() {
+          _userId = null;
+          _rankingParticipation = false;
+          _userNameController.text = '';
+          _initialUserName = '';
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ランキングデータを削除しました。')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('エラー: ランキングデータの削除に失敗しました。\n${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
+  // 新規追加: すべての睡眠記録を削除する関数
+  Future<void> _deleteAllSleepRecords() async {
+    if (_userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('エラー: ユーザーIDが見つかりません。')),
+      );
+      return;
+    }
+
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('すべての睡眠記録を削除しますか？'),
+        content: const Text('この操作は元に戻せません。すべての睡眠記録が完全に削除されます。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('キャンセル')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('削除する'), style: TextButton.styleFrom(foregroundColor: Colors.red)),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _supabaseRankingService.deleteAllSleepRecords(_userId!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('すべての睡眠記録を削除しました。')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('エラー: 睡眠記録の削除に失敗しました。\n${e.toString()}')),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -240,6 +329,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: const Text('睡眠時間をサーバーに送信し、全国ランキングに参加します'),
             value: _rankingParticipation,
             onChanged: _saveRankingParticipation,
+          ),
+          const Divider(),
+          // 新規追加: ランキングデータを削除するボタン
+          ListTile(
+            title: const Text('ランキングデータを削除'),
+            subtitle: const Text('ランキングからあなたのユーザー情報と睡眠記録を削除します'),
+            trailing: const Icon(Icons.delete_forever, color: Colors.redAccent),
+            onTap: _deleteRankingData,
+          ),
+          const Divider(),
+          // 新規追加: すべての睡眠記録を削除するボタン
+          ListTile(
+            title: const Text('すべての睡眠記録を削除'),
+            subtitle: const Text('アプリ内のすべての睡眠記録を削除します'),
+            trailing: const Icon(Icons.delete_sweep, color: Colors.redAccent),
+            onTap: _deleteAllSleepRecords,
           ),
           const Divider(),
           ListTile(

@@ -77,4 +77,14 @@ class SupabaseRankingService {
       onConflict: 'id',
     );
   }
+
+  // 新規追加: ユーザーのランキングデータを削除する
+  Future<void> deleteUserRankingData(String userId) async {
+    await _supabase.from('users').delete().eq('id', userId);
+  }
+
+  // 新規追加: ユーザーのすべての睡眠記録を削除する
+  Future<void> deleteAllSleepRecords(String userId) async {
+    await _supabase.from('sleep_records').delete().eq('user_id', userId);
+  }
 }
