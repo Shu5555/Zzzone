@@ -1,0 +1,44 @@
+name: Deploy Flutter Web to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main # main ブランチへのプッシュ時に実行
+
+jobs:
+  build_and_deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.x' # pubspec.yaml の SDK バージョンに合わせて調整 (例: 3.9.2)
+          channel: 'stable'
+
+      - name: Get Flutter dependencies
+        run: flutter pub get
+
+      - name: Create .env file for GEMINI_API_KEY
+        run: echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }} # GitHub Secrets から API キーを取得
+
+      - name: Build Flutter Web
+        run: flutter build web --release --base-href /Zzzone/ # リポジトリ名に合わせて変更
+
+      - name: Copy index.html to 404.html for SPA routing
+        run: cp build/web/index.html build/web/404.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+          publish_branch: gh-pages # デプロイ先のブランチ (通常は gh-pages)
+          # CNAME ファイルを使用する場合 (カスタムドメイン設定時)
+          # cname: your-custom-domain.com
