@@ -8,6 +8,10 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to push to the gh-pages branch
+      pages: write    # Required to deploy to GitHub Pages
+      id-token: write # Required for OpenID Connect (if used, good practice)
 
     steps:
       - name: Checkout code
