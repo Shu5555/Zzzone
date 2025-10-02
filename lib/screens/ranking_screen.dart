@@ -55,14 +55,44 @@ class _RankingScreenState extends State<RankingScreen> {
               final username = entry['users']?['username'] ?? '名無しさん';
               final duration = entry['sleep_duration'] as int? ?? 0;
 
-              return ListTile(
-                leading: CircleAvatar(
-                  child: Text('$rank'),
-                ),
-                title: Text(username),
-                trailing: Text(
-                  _formatDuration(duration),
-                  style: Theme.of(context).textTheme.titleMedium,
+              // 上位3位の装飾を定義
+              Widget? leadingIcon;
+              Color? tileColor;
+              TextStyle? titleStyle;
+
+              if (rank == 1) {
+                leadingIcon = Icon(Icons.emoji_events, color: Colors.amber[600]);
+                tileColor = Colors.amber[50];
+                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 18);
+              } else if (rank == 2) {
+                leadingIcon = Icon(Icons.emoji_events, color: Colors.grey[400]);
+                tileColor = Colors.grey[50];
+                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 17);
+              } else if (rank == 3) {
+                leadingIcon = Icon(Icons.emoji_events, color: Colors.brown[400]);
+                tileColor = Colors.brown[50];
+                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 16);
+              }
+
+              return Card(
+                elevation: rank <= 3 ? 4.0 : 1.0,
+                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                color: tileColor,
+                child: ListTile(
+                  leading: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text('$rank位', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      if (leadingIcon != null) leadingIcon,
+                    ],
+                  ),
+                  title: Text(username, style: titleStyle),
+                  trailing: Text(
+                    _formatDuration(duration),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
                 ),
               );
             },

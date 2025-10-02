@@ -5,6 +5,7 @@ import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import '../services/api_service.dart';
 import '../utils/date_helper.dart';
+import '../services/supabase_ranking_service.dart'; // Supabaseサービスをインポート
 
 class ManualSleepEntryScreen extends StatefulWidget {
   const ManualSleepEntryScreen({super.key});
@@ -91,7 +92,26 @@ class _ManualSleepEntryScreenState extends State<ManualSleepEntryScreen> {
 
     await DatabaseHelper.instance.create(newRecord);
 
+    // ▼▼▼ Supabaseへのデータ送信処理を追加 ▼▼▼
+    final prefs = await SharedPreferences.getInstance();
+    final isRankingEnabled = prefs.getBool('isRankingEnabled') ?? false;
+    final userId = prefs.getString('userId');
 
+    if (isRankingEnabled && userId != null) {
+      try {
+        final supabaseService = SupabaseRankingService();
+        await supabaseService.submitRecord(
+          userId: userId,
+          sleepDuration: totalMinutes,
+          date: DateFormat('yyyy-MM-dd').format(logicalDateToSave),
+        );
+      } catch (e) {
+        // エラーが発生してもUIの進行を妨げないように、ここではエラーを握りつぶす
+        // 本番環境ではロギングなどが望ましい
+        print('Failed to submit record to Supabase: $e');
+      }
+    }
+    // ▲▲▲ Supabaseへのデータ送信処理を追加 ▲▲▲
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
