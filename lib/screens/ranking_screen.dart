@@ -57,26 +57,22 @@ class _RankingScreenState extends State<RankingScreen> {
 
               // 上位3位の装飾を定義
               Widget? leadingIcon;
-              Color? tileColor;
               TextStyle? titleStyle;
               TextStyle? rankStyle; // 順位のスタイルを追加
               Color? specialColor; // 上位3位用の色を追加
 
               if (rank == 1) {
                 leadingIcon = Icon(Icons.emoji_events, color: Colors.amber[600]);
-                tileColor = Colors.amber[50];
                 specialColor = Colors.amber[800];
                 titleStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: specialColor);
                 rankStyle = TextStyle(fontWeight: FontWeight.bold, color: specialColor);
               } else if (rank == 2) {
                 leadingIcon = Icon(Icons.emoji_events, color: Colors.grey[400]);
-                tileColor = Colors.grey[50];
                 specialColor = Colors.grey[700];
                 titleStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: specialColor);
                 rankStyle = TextStyle(fontWeight: FontWeight.bold, color: specialColor);
               } else if (rank == 3) {
                 leadingIcon = Icon(Icons.emoji_events, color: Colors.brown[400]);
-                tileColor = Colors.brown[50];
                 specialColor = Colors.brown[700];
                 titleStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: specialColor);
                 rankStyle = TextStyle(fontWeight: FontWeight.bold, color: specialColor);
@@ -85,7 +81,6 @@ class _RankingScreenState extends State<RankingScreen> {
               return Card(
                 elevation: rank <= 3 ? 4.0 : 1.0,
                 margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                color: tileColor,
                 child: ListTile(
                   leading: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
