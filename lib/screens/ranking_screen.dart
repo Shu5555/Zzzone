@@ -59,19 +59,27 @@ class _RankingScreenState extends State<RankingScreen> {
               Widget? leadingIcon;
               Color? tileColor;
               TextStyle? titleStyle;
+              TextStyle? rankStyle; // 順位のスタイルを追加
+              Color? specialColor; // 上位3位用の色を追加
 
               if (rank == 1) {
                 leadingIcon = Icon(Icons.emoji_events, color: Colors.amber[600]);
                 tileColor = Colors.amber[50];
-                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 18);
+                specialColor = Colors.amber[800];
+                titleStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: specialColor);
+                rankStyle = TextStyle(fontWeight: FontWeight.bold, color: specialColor);
               } else if (rank == 2) {
                 leadingIcon = Icon(Icons.emoji_events, color: Colors.grey[400]);
                 tileColor = Colors.grey[50];
-                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 17);
+                specialColor = Colors.grey[700];
+                titleStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: specialColor);
+                rankStyle = TextStyle(fontWeight: FontWeight.bold, color: specialColor);
               } else if (rank == 3) {
                 leadingIcon = Icon(Icons.emoji_events, color: Colors.brown[400]);
                 tileColor = Colors.brown[50];
-                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 16);
+                specialColor = Colors.brown[700];
+                titleStyle = TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: specialColor);
+                rankStyle = TextStyle(fontWeight: FontWeight.bold, color: specialColor);
               }
 
               return Card(
@@ -82,7 +90,7 @@ class _RankingScreenState extends State<RankingScreen> {
                   leading: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('$rank位', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text('$rank位', style: rankStyle ?? const TextStyle(fontWeight: FontWeight.bold)),
                       if (leadingIcon != null) leadingIcon,
                     ],
                   ),
@@ -90,8 +98,9 @@ class _RankingScreenState extends State<RankingScreen> {
                   trailing: Text(
                     _formatDuration(duration),
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
-                    ),
+                          fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+                          color: specialColor, // 色を適用
+                        ),
                   ),
                 ),
               );

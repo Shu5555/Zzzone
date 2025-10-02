@@ -124,6 +124,12 @@ CREATE TABLE sleep_records (
     );
   }
 
+  // Add this method to delete all records
+  Future<int> deleteAllRecords() async {
+    final db = await instance.database;
+    return await db.delete('sleep_records');
+  }
+
   Future<SleepRecord?> getLatestRecord() async {
     final db = await instance.database;
     final result = await db.query(

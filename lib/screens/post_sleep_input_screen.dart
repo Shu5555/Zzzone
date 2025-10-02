@@ -113,6 +113,15 @@ class _PostSleepInputScreenState extends State<PostSleepInputScreen> {
           didNotOversleep: _didNotOversleep,
         );
         recordToSave = await DatabaseHelper.instance.create(recordToSave);
+
+        // Add Sleep Coins for new records
+        final durationInMinutes = widget.wakeUpTime!.difference(widget.sleepTime!).inMinutes;
+        final currentCoins = prefs.getInt('sleep_coins') ?? 0;
+        final newCoins = currentCoins + durationInMinutes;
+        await prefs.setInt('sleep_coins', newCoins);
+
+        // Debug log for earned coins
+        print('Sleep Coins earned: $durationInMinutes');
       }
 
       if (mounted) {

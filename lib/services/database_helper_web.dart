@@ -109,6 +109,15 @@ class DatabaseHelper {
     return 0;
   }
 
+  // Add this method to delete all records for web
+  Future<int> deleteAllRecords() async {
+    await _ensureInitialized();
+    final recordsDeleted = _inMemoryDb.length;
+    _inMemoryDb.clear();
+    await _persistData();
+    return recordsDeleted;
+  }
+
   Future<SleepRecord?> getLatestRecord() async {
     await _ensureInitialized();
     if (_inMemoryDb.isEmpty) return null;

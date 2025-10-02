@@ -69,13 +69,20 @@ class SupabaseRankingService {
     if (username.length > 20) {
       throw Exception('Username cannot be longer than 20 characters');
     }
-    await _supabase.from('users').upsert(
-      {
-        'id': id,
-        'username': username,
-      },
-      onConflict: 'id',
-    );
+    try {
+      await _supabase.from('users').upsert(
+        {
+          'id': id,
+          'username': username,
+        },
+        onConflict: 'id',
+      );
+    } on PostgrestException catch (e) {
+      if (e.code == '23505') { // unique_violation
+        throw Exception('このユーザー名は既に使用されています。');
+      }
+      rethrow;
+    }
   }
 
   // 新規追加: ユーザーのランキングデータを削除する

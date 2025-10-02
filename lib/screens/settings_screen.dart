@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
+import '../services/database_helper.dart'; // Import DatabaseHelper
 import '../services/api_service.dart';
 import '../services/supabase_ranking_service.dart'; // Add this import
 import 'about_screen.dart';
@@ -28,37 +29,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _userId;
   String _initialUserName = '';
 
+  final FocusNode _usernameFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+    _usernameFocusNode.addListener(_onUsernameFocusChange);
+  }
+
+  void _onUsernameFocusChange() {
+    if (!_usernameFocusNode.hasFocus) {
+      _updateUsername();
+    }
+  }
+
+  Future<void> _updateUsername() async {
+    final newUsername = _userNameController.text;
+    if (_rankingParticipation && _userId != null && newUsername != _initialUserName) {
+      try {
+        await _apiService.updateUser(_userId!, newUsername);
+        // On success, update the initial username to prevent repeated updates
+        setState(() {
+          _initialUserName = newUsername;
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ユーザー名を更新しました。')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          // Revert to the old username on failure
+          _userNameController.text = _initialUserName;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('エラー: ${e.toString().replaceFirst('Exception: ', '')}')),
+          );
+        }
+      }
+    }
   }
 
   @override
   void dispose() {
-    _updateSettingsOnExit();
+    _usernameFocusNode.removeListener(_onUsernameFocusChange);
+    _usernameFocusNode.dispose();
     _userNameController.dispose();
     super.dispose();
   }
 
-  Future<void> _updateSettingsOnExit() async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentUsername = _userNameController.text;
 
-    // Save username locally
-    await prefs.setString('userName', currentUsername);
-
-    // Sync username with server if it has changed and user is participating
-    if (_rankingParticipation && _userId != null && currentUsername != _initialUserName) {
-      try {
-        await _apiService.updateUser(_userId!, currentUsername);
-      } catch (e) {
-        // Since this happens on exit, we can't easily show a snackbar.
-        // Logging the error is the most practical approach.
-        print('Failed to update username on exit: $e');
-      }
-    }
-  }
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -122,7 +142,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('エラー: ユーザー情報の更新に失敗しました。\n${e.toString()}')),
+          SnackBar(content: Text('エラー: ユーザー情報の更新に失敗しました。\n${e.toString().replaceFirst('Exception: ', '')}')),
         );
         // Revert the switch state on failure
         setState(() {
@@ -249,18 +269,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // 新規追加: すべての睡眠記録を削除する関数
   Future<void> _deleteAllSleepRecords() async {
-    if (_userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('エラー: ユーザーIDが見つかりません。')),
-      );
-      return;
-    }
-
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('すべての睡眠記録を削除しますか？'),
-        content: const Text('この操作は元に戻せません。すべての睡眠記録が完全に削除されます。'),
+        content: const Text('この操作は元に戻せません。アプリ内のすべての睡眠記録が完全に削除されます。'),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('キャンセル')),
           TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('削除する'), style: TextButton.styleFrom(foregroundColor: Colors.red)),
@@ -270,7 +283,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     if (confirmed == true) {
       try {
-        await _supabaseRankingService.deleteAllSleepRecords(_userId!);
+        // 1. ローカルの記録を常に削除
+        await DatabaseHelper.instance.deleteAllRecords();
+
+        // 2. ランキングに参加している場合のみ、サーバーの記録を削除
+        if (_userId != null) {
+          await _supabaseRankingService.deleteAllSleepRecords(_userId!);
+        }
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('すべての睡眠記録を削除しました。')),
@@ -318,6 +338,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('ユーザー名'),
             subtitle: TextField(
               controller: _userNameController,
+              focusNode: _usernameFocusNode, // Add this line
               maxLength: 20, // 20文字に制限
               decoration: const InputDecoration(
                 hintText: 'ランキングに表示される名前',
