@@ -1,0 +1,235 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sleep_management_app/models/sleep_record.dart';
+import 'package:sleep_management_app/services/database_helper_mobile.dart';
+import 'package:sleep_management_app/models/sleep_filter_criteria.dart';
+import 'package:sqflite/sqflite.dart'; // Add this import for databaseFactory
+import 'package:supabase_flutter/supabase_flutter.dart'; // Add this import for Supabase
+import 'package:shared_preferences/shared_preferences.dart'; // Add this import for SharedPreferences
+
+void main() {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
+  group('DatabaseHelper - Filtered Records', () {
+    late DatabaseHelper dbHelper;
+    late Database db; // Declare db here
+
+    setUp(() async {
+      // Mock SharedPreferences for Supabase initialization
+      SharedPreferences.setMockInitialValues({});
+
+      // Initialize Supabase for testing purposes
+      await Supabase.initialize(
+        url: 'http://localhost', // Placeholder URL
+        anonKey: 'test_anon_key', // Placeholder key
+      );
+
+      db = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: (db, version) async {
+            const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
+            const textType = 'TEXT';
+            const intType = 'INTEGER NOT NULL';
+
+            await db.execute('''
+CREATE TABLE sleep_records ( 
+  id $idType, 
+  sleepTime TEXT NOT NULL,
+  wakeUpTime TEXT NOT NULL,
+  score $intType,
+  performance $intType,
+  hadDaytimeDrowsiness $intType,
+  hasAchievedGoal $intType,
+  memo $textType,
+  didNotOversleep $intType
+  )
+''');
+          },
+        ),
+      );
+      dbHelper = DatabaseHelper.forTesting(databaseFactoryFfi, testDatabase: db); // Use the test constructor and pass the opened database
+      // Clear any existing data (already done by opening a new in-memory db)
+
+      // Insert dummy data
+      // Directly insert into the database to ensure it's the same instance
+      await db.insert('sleep_records', SleepRecord(
+        sleepTime: DateTime(2023, 10, 26, 22, 0),
+        wakeUpTime: DateTime(2023, 10, 27, 6, 0),
+        score: 8,
+        performance: 3,
+        hadDaytimeDrowsiness: false,
+        hasAchievedGoal: true,
+        memo: '#良い睡眠',
+        didNotOversleep: true,
+      ).toMap());
+      await db.insert('sleep_records', SleepRecord(
+        sleepTime: DateTime(2023, 10, 27, 23, 0),
+        wakeUpTime: DateTime(2023, 10, 28, 5, 0),
+        score: 6,
+        performance: 2,
+        hadDaytimeDrowsiness: true,
+        hasAchievedGoal: false,
+        memo: '#眠い',
+        didNotOversleep: false,
+      ).toMap());
+      await db.insert('sleep_records', SleepRecord(
+        sleepTime: DateTime(2023, 10, 28, 21, 30),
+        wakeUpTime: DateTime(2023, 10, 29, 7, 30),
+        score: 9,
+        performance: 3,
+        hadDaytimeDrowsiness: false,
+        hasAchievedGoal: true,
+        memo: '#最高',
+        didNotOversleep: true,
+      ).toMap());
+      await db.insert('sleep_records', SleepRecord(
+        sleepTime: DateTime(2023, 10, 29, 1, 0), // Sleep across midnight
+        wakeUpTime: DateTime(2023, 10, 29, 9, 0),
+        score: 5,
+        performance: 1,
+        hadDaytimeDrowsiness: true,
+        hasAchievedGoal: false,
+        memo: '#最悪',
+        didNotOversleep: false,
+      ).toMap());
+      await db.insert('sleep_records', SleepRecord(
+        sleepTime: DateTime(2023, 10, 30, 22, 0),
+        wakeUpTime: DateTime(2023, 10, 31, 6, 0),
+        score: 7,
+        performance: 2,
+        hadDaytimeDrowsiness: false,
+        hasAchievedGoal: true,
+        memo: '#普通',
+        didNotOversleep: true,
+      ).toMap());
+    });
+
+    tearDown(() async {
+      await db.close(); // Close the database opened in setUp
+      await databaseFactoryFfi.deleteDatabase(inMemoryDatabasePath); // Ensure the in-memory db is closed and deleted
+    });
+
+    test('should return all records when criteria is empty', () async {
+      final criteria = SleepFilterCriteria();
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 5);
+    });
+
+    test('should filter by min sleep duration', () async {
+      final criteria = SleepFilterCriteria(minSleepDurationHours: 8);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 4); // 8h (score 8), 10h (score 9), 8h (score 5), 8h (score 7)
+      expect(records.first.score, 7); // Ordered by sleepTime DESC
+    });
+
+    test('should filter by max sleep duration', () async {
+      final criteria = SleepFilterCriteria(maxSleepDurationHours: 7);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 1); // 6h (score 6)
+      expect(records.first.score, 6); // Ordered by sleepTime DESC
+    });
+
+    test('should filter by drowsiness', () async {
+      final criteria = SleepFilterCriteria(hasDrowsiness: true);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 2);
+      expect(records.first.score, 5);
+    });
+
+    test('should filter by no drowsiness', () async {
+      final criteria = SleepFilterCriteria(hasDrowsiness: false);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 3);
+      expect(records.first.score, 7);
+    });
+
+    test('should filter by oversleeping', () async {
+      final criteria = SleepFilterCriteria(hasOverslept: false);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 2);
+      expect(records.first.score, 5);
+    });
+
+    test('should filter by not oversleeping', () async {
+      final criteria = SleepFilterCriteria(hasOverslept: true);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 3);
+      expect(records.first.score, 7);
+    });
+
+    test('should filter by achieved goal', () async {
+      final criteria = SleepFilterCriteria(achievedGoal: true);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 3);
+      expect(records.first.score, 7);
+    });
+
+    test('should filter by not achieved goal', () async {
+      final criteria = SleepFilterCriteria(achievedGoal: false);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 2);
+      expect(records.first.score, 5);
+    });
+
+    test('should filter by performance level', () async {
+      final criteria = SleepFilterCriteria(performanceLevel: 3);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 2);
+      expect(records.first.score, 9);
+    });
+
+    test('should filter by hashtag', () async {
+      final criteria = SleepFilterCriteria(hashtag: '最高');
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 1);
+      expect(records.first.score, 9);
+    });
+
+    test('should filter by date range', () async {
+      final criteria = SleepFilterCriteria(
+        startDate: DateTime(2023, 10, 27),
+        endDate: DateTime(2023, 10, 28),
+      );
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 2); // Records from 2023-10-27, 2023-10-28
+      expect(records.first.score, 9); // Ordered by sleepTime DESC
+    });
+
+    test('should filter by min sleep score', () async {
+      final criteria = SleepFilterCriteria(minSleepScore: 7);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 3);
+      expect(records.first.score, 9);
+    });
+
+    test('should filter by max sleep score', () async {
+      final criteria = SleepFilterCriteria(maxSleepScore: 6);
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 2);
+      expect(records.first.score, 6);
+    });
+
+    test('should filter by multiple criteria (duration and drowsiness)', () async {
+      final criteria = SleepFilterCriteria(
+        minSleepDurationHours: 7,
+        hasDrowsiness: true,
+      );
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 1); // 8h sleep, drowsy
+      expect(records.first.score, 5);
+    });
+
+    test('should filter by multiple criteria (score and hashtag)', () async {
+      final criteria = SleepFilterCriteria(
+        minSleepScore: 8,
+        hashtag: '良い睡眠',
+      );
+      final records = await dbHelper.getFilteredSleepRecords(criteria);
+      expect(records.length, 1);
+      expect(records.first.score, 8);
+    });
+  });
+}

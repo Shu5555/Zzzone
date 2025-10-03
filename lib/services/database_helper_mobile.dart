@@ -52,12 +52,8 @@ CREATE TABLE sleep_records (
     final userId = prefs.getString('userId');
 
     if (isRankingEnabled && userId != null) {
-      final sleepTime = record.sleepTime;
-      var effectiveDate = sleepTime;
-      if (sleepTime.hour < 4) {
-        effectiveDate = sleepTime.subtract(const Duration(days: 1));
-      }
-      final date = DateFormat('yyyy-MM-dd').format(effectiveDate);
+      // 基準を就寝時刻から起床時刻に変更し、共通ヘルパー関数を利用する
+      final date = getLogicalDateString(record.wakeUpTime);
       final duration = record.wakeUpTime.difference(record.sleepTime).inMinutes;
 
       if (duration > 0) {

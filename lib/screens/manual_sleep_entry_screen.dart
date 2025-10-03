@@ -103,7 +103,7 @@ class _ManualSleepEntryScreenState extends State<ManualSleepEntryScreen> {
         await supabaseService.submitRecord(
           userId: userId,
           sleepDuration: totalMinutes,
-          date: DateFormat('yyyy-MM-dd').format(logicalDateToSave),
+          date: getLogicalDateString(wakeUpTime),
         );
       } catch (e) {
         // エラーが発生してもUIの進行を妨げないように、ここではエラーを握りつぶす
