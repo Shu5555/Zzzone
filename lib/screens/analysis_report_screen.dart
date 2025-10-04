@@ -45,9 +45,9 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
 
     // 3. LLM分析（キャッシュチェックとAPI呼び出し）
     final cachedData = await CacheService().loadAnalysis();
-    final currentLatestRecordId = records.first.id!;
+    final currentLatestRecordDataId = records.first.dataId;
 
-    if (cachedData != null && cachedData.latestRecordId == currentLatestRecordId) {
+    if (cachedData != null && cachedData.latestRecordId == currentLatestRecordDataId) {
       // 3a. キャッシュが有効な場合
       if (mounted) setState(() {
         _llmAnalysisResult = cachedData.analysisResult;
@@ -58,7 +58,7 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
       // 3b. キャッシュがない、またはデータが古い場合：再分析を実行
       try {
         final newLlmResult = await AnalysisService().fetchSleepAnalysis(records);
-        await CacheService().saveAnalysis(newLlmResult, currentLatestRecordId);
+        await CacheService().saveAnalysis(newLlmResult, currentLatestRecordDataId);
         if (mounted) setState(() {
           _llmAnalysisResult = newLlmResult;
           _localAnalysisResult = localResult;

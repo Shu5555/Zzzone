@@ -5,7 +5,7 @@ import '../models/analysis_cache.dart';
 class CacheService {
   static const _key = 'analysis_cache';
 
-  Future<void> saveAnalysis(Map<String, dynamic> result, int latestRecordId) async {
+  Future<void> saveAnalysis(Map<String, dynamic> result, String latestRecordId) async {
     final prefs = await SharedPreferences.getInstance();
     final cache = AnalysisCache(
       analysisResult: result,

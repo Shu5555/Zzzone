@@ -96,6 +96,22 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
       ADD CONSTRAINT users_username_key UNIQUE (username);
       ```
 
+    - **`sleep_records`テーブルの外部キー設定変更（ユーザー削除対応）:**
+      - `users`テーブルからユーザーが削除された際に、関連する`sleep_records`も自動的に削除されるように設定します。これにより、ユーザーが自身の全データを削除する機能が正しく動作します。
+      - 以下のSQLを実行してください。
+      ```sql
+      -- 既存の外部キー制約を削除し、ON DELETE CASCADEを付けて再作成します。
+      -- これにより、usersテーブルの行が削除されると、関連するsleep_recordsテーブルの行も自動的に削除されます。
+      ALTER TABLE public.sleep_records
+      DROP CONSTRAINT IF EXISTS sleep_records_user_id_fkey;
+
+      ALTER TABLE public.sleep_records
+      ADD CONSTRAINT sleep_records_user_id_fkey
+      FOREIGN KEY (user_id)
+      REFERENCES public.users (id)
+      ON DELETE CASCADE;
+      ```
+
 3.  **Netlifyのセットアップ:**
     - 本プロジェクトのGitリポジトリをNetlifyに連携してデプロイします。
     - Netlifyの環境変数に、SupabaseプロジェクトのURLと`anon`キーをそれぞれ`SUPABASE_URL`、`SUPABASE_ANON_KEY`として設定します。

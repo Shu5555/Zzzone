@@ -5,7 +5,7 @@ import 'package:table_calendar/table_calendar.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import '../utils/date_helper.dart';
-import 'post_sleep_input_screen.dart';
+import 'sleep_edit_screen.dart';
 
 class CalendarHistoryScreen extends StatefulWidget {
   const CalendarHistoryScreen({super.key});
@@ -41,7 +41,7 @@ class _CalendarHistoryScreenState extends State<CalendarHistoryScreen> {
   Map<DateTime, List<SleepRecord>> _groupRecordsByDate(List<SleepRecord> records) {
     final Map<DateTime, List<SleepRecord>> data = {};
     for (final record in records) {
-      final date = getLogicalDate(record.sleepTime);
+      final date = record.recordDate;
       if (data[date] == null) data[date] = [];
       data[date]!.add(record);
     }
@@ -54,7 +54,7 @@ class _CalendarHistoryScreenState extends State<CalendarHistoryScreen> {
 
   void _navigateToEditScreen(SleepRecord record) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => PostSleepInputScreen(initialRecord: record)),
+      MaterialPageRoute(builder: (context) => SleepEditScreen(existingRecord: record)),
     );
     _loadRecordsAndInitSelection();
   }
@@ -114,11 +114,11 @@ class _CalendarHistoryScreenState extends State<CalendarHistoryScreen> {
                           return Card(
                             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             child: ListTile(
-                              onLongPress: () => _navigateToEditScreen(record),
+                              onTap: () => _navigateToEditScreen(record),
                               title: Row(children: [
                                 Expanded(
                                   child: Text(
-                                    '${DateFormat('M/d(E)', 'ja_JP').format(getLogicalDate(record.sleepTime))}の睡眠',
+                                    '${DateFormat('M/d(E)', 'ja_JP').format(record.recordDate)}の睡眠',
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),

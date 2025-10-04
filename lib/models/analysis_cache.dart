@@ -1,12 +1,12 @@
 class AnalysisCache {
   final Map<String, dynamic> analysisResult;
   final DateTime timestamp;
-  final int latestRecordId; // 分析対象のうち、最も新しい睡眠記録のID
+  final String latestRecordId; // 分析対象のうち、最も新しい睡眠記録のID
 
   AnalysisCache({
     required this.analysisResult,
     required this.timestamp,
-    required this.latestRecordId, // 追加
+    required this.latestRecordId, // 変更
   });
 
   // fromJson, toJson も latestRecordId を含めるように更新
@@ -14,7 +14,7 @@ class AnalysisCache {
     return AnalysisCache(
       analysisResult: Map<String, dynamic>.from(json['analysisResult']),
       timestamp: DateTime.parse(json['timestamp']),
-      latestRecordId: json['latestRecordId'] as int,
+      latestRecordId: json['latestRecordId'] as String, // 変更
     );
   }
 

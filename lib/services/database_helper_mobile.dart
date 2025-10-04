@@ -1,15 +1,11 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import '../models/sleep_record.dart';
-import './api_service.dart';
 import '../utils/date_helper.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
-  final ApiService _apiService = ApiService();
 
   DatabaseHelper._init();
 
@@ -23,68 +19,54 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    // DBバージョンを2に更新
+    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
-    const idType = 'INTEGER PRIMARY KEY AUTOINCREMENT';
-    const textType = 'TEXT';
+    const textType = 'TEXT NOT NULL';
     const intType = 'INTEGER NOT NULL';
 
     await db.execute('''
 CREATE TABLE sleep_records ( 
-  id $idType, 
-  sleepTime TEXT NOT NULL,
-  wakeUpTime TEXT NOT NULL,
+  dataId TEXT PRIMARY KEY, 
+  recordDate $textType,
+  spec_version $intType,
+  sleepTime $textType,
+  wakeUpTime $textType,
   score $intType,
   performance $intType,
   hadDaytimeDrowsiness $intType,
   hasAchievedGoal $intType,
-  memo $textType,
+  memo TEXT,
   didNotOversleep $intType
   )
 ''');
   }
 
-  Future<void> _syncWithServer(SleepRecord record) async {
-    final prefs = await SharedPreferences.getInstance();
-    final isRankingEnabled = prefs.getBool('rankingParticipation') ?? false;
-    final userId = prefs.getString('userId');
-
-    if (isRankingEnabled && userId != null) {
-      final sleepTime = record.sleepTime;
-      var effectiveDate = sleepTime;
-      if (sleepTime.hour < 4) {
-        effectiveDate = sleepTime.subtract(const Duration(days: 1));
-      }
-      final date = DateFormat('yyyy-MM-dd').format(effectiveDate);
-      final duration = record.wakeUpTime.difference(record.sleepTime).inMinutes;
-
-      if (duration > 0) {
-        await _apiService.submitRecord(userId, duration, date);
-      }
+  // スキーママイグレーションのロジック
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Phase 4のデータ移行で扱うため、ここではスキーマ変更のみ
+      // 既存のテーブルをリネームして退避
+      await db.execute('ALTER TABLE sleep_records RENAME TO sleep_records_v1');
+      // 新しいテーブルを作成
+      await _createDB(db, newVersion);
     }
   }
 
   Future<SleepRecord> create(SleepRecord record) async {
     final db = await instance.database;
-    final Map<String, dynamic> row = record.toMap();
-    row.remove('id');
-    final id = await db.insert('sleep_records', row);
-    final newRecord = record.copyWith(id: id);
-
-    await _syncWithServer(newRecord);
-
-    return newRecord;
+    await db.insert('sleep_records', record.toMap());
+    return record;
   }
 
-  Future<SleepRecord?> readRecord(int id) async {
+  Future<SleepRecord?> readRecord(String dataId) async {
     final db = await instance.database;
     final maps = await db.query(
       'sleep_records',
-      columns: ['id', 'sleepTime', 'wakeUpTime', 'score', 'performance', 'hadDaytimeDrowsiness', 'hasAchievedGoal', 'memo', 'didNotOversleep'],
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'dataId = ?',
+      whereArgs: [dataId],
     );
 
     if (maps.isNotEmpty) {
@@ -106,25 +88,21 @@ CREATE TABLE sleep_records (
     final result = await db.update(
       'sleep_records',
       record.toMap(),
-      where: 'id = ?',
-      whereArgs: [record.id],
+      where: 'dataId = ?',
+      whereArgs: [record.dataId],
     );
-
-    await _syncWithServer(record);
-
     return result;
   }
 
-  Future<int> delete(int id) async {
+  Future<int> delete(String dataId) async {
     final db = await instance.database;
     return await db.delete(
       'sleep_records',
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'dataId = ?',
+      whereArgs: [dataId],
     );
   }
 
-  // Add this method to delete all records
   Future<int> deleteAllRecords() async {
     final db = await instance.database;
     return await db.delete('sleep_records');
@@ -156,15 +134,19 @@ CREATE TABLE sleep_records (
 
   Future<SleepRecord?> getRecordForDate(DateTime date) async {
     final db = await instance.database;
-    final allRecords = await readAllRecords();
     final targetLogicalDate = getLogicalDate(date);
+    final result = await db.query(
+      'sleep_records',
+      where: 'recordDate = ?',
+      whereArgs: [targetLogicalDate.toIso8601String().substring(0, 10)], // yyyy-MM-dd形式で比較
+      limit: 1,
+    );
 
-    for (var record in allRecords) {
-      if (getLogicalDate(record.sleepTime) == targetLogicalDate) {
-        return record;
-      }
+    if (result.isNotEmpty) {
+      return SleepRecord.fromMap(result.first);
+    } else {
+      return null;
     }
-    return null;
   }
 
   Future close() async {

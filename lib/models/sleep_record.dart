@@ -1,5 +1,8 @@
 class SleepRecord {
-  final int? id;
+  final String dataId;
+  final DateTime recordDate;
+  final int spec_version;
+
   final DateTime sleepTime;
   final DateTime wakeUpTime;
   final int score;
@@ -7,12 +10,14 @@ class SleepRecord {
   final bool hadDaytimeDrowsiness;
   final bool hasAchievedGoal;
   final String? memo;
-  final bool didNotOversleep; // 追加
+  final bool didNotOversleep;
 
   Duration get duration => wakeUpTime.difference(sleepTime);
 
   SleepRecord({
-    this.id,
+    required this.dataId,
+    required this.recordDate,
+    this.spec_version = 2,
     required this.sleepTime,
     required this.wakeUpTime,
     required this.score,
@@ -20,11 +25,13 @@ class SleepRecord {
     required this.hadDaytimeDrowsiness,
     required this.hasAchievedGoal,
     this.memo,
-    required this.didNotOversleep, // 追加
+    required this.didNotOversleep,
   });
 
   SleepRecord copyWith({
-    int? id,
+    String? dataId,
+    DateTime? recordDate,
+    int? spec_version,
     DateTime? sleepTime,
     DateTime? wakeUpTime,
     int? score,
@@ -35,7 +42,9 @@ class SleepRecord {
     bool? didNotOversleep,
   }) {
     return SleepRecord(
-      id: id ?? this.id,
+      dataId: dataId ?? this.dataId,
+      recordDate: recordDate ?? this.recordDate,
+      spec_version: spec_version ?? this.spec_version,
       sleepTime: sleepTime ?? this.sleepTime,
       wakeUpTime: wakeUpTime ?? this.wakeUpTime,
       score: score ?? this.score,
@@ -49,21 +58,25 @@ class SleepRecord {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
-      'sleepTime': sleepTime.toUtc().toIso8601String(),
-      'wakeUpTime': wakeUpTime.toUtc().toIso8601String(),
+      'dataId': dataId,
+      'recordDate': recordDate.toIso8601String(),
+      'spec_version': spec_version,
+      'sleepTime': sleepTime.toIso8601String(),
+      'wakeUpTime': wakeUpTime.toIso8601String(),
       'score': score,
       'performance': performance,
       'hadDaytimeDrowsiness': hadDaytimeDrowsiness ? 1 : 0,
       'hasAchievedGoal': hasAchievedGoal ? 1 : 0,
       'memo': memo,
-      'didNotOversleep': didNotOversleep ? 1 : 0, // 追加
+      'didNotOversleep': didNotOversleep ? 1 : 0,
     };
   }
 
   factory SleepRecord.fromMap(Map<String, dynamic> map) {
     return SleepRecord(
-      id: map['id'],
+      dataId: map['dataId'],
+      recordDate: DateTime.parse(map['recordDate']),
+      spec_version: map['spec_version'] ?? 2,
       sleepTime: DateTime.parse(map['sleepTime']),
       wakeUpTime: DateTime.parse(map['wakeUpTime']),
       score: map['score'],
@@ -71,7 +84,7 @@ class SleepRecord {
       hadDaytimeDrowsiness: map['hadDaytimeDrowsiness'] == 1,
       hasAchievedGoal: map['hasAchievedGoal'] == 1,
       memo: map['memo'],
-      didNotOversleep: map['didNotOversleep'] == 1, // 追加
+      didNotOversleep: map['didNotOversleep'] == 1,
     );
   }
 

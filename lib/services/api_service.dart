@@ -16,10 +16,19 @@ class ApiService {
   }
 
   /// 睡眠記録を送信する
-  Future<void> submitRecord(String userId, int sleepDuration, String date) async {
+  Future<void> submitRecord({
+    required String userId,
+    required int sleepDuration,
+    required String date,
+    required String dataId,
+  }) async {
     try {
       await _supabaseRankingService.submitRecord(
-          userId: userId, sleepDuration: sleepDuration, date: date);
+        userId: userId,
+        sleepDuration: sleepDuration,
+        date: date,
+        dataId: dataId,
+      );
     } on PostgrestException catch (e) {
       throw Exception('Failed to submit record: ${e.message}');
     } catch (e) {

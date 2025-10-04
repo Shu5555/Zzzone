@@ -6,13 +6,32 @@ import 'package:table_calendar/table_calendar.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import '../utils/date_helper.dart';
-import 'post_sleep_input_screen.dart';
+import 'sleep_edit_screen.dart';
 import 'calendar_history_screen.dart';
 import 'analysis_report_screen.dart';
-import './manual_sleep_entry_screen.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
+
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  final GlobalKey<_WeeklyHistoryViewState> _weeklyViewKey = GlobalKey();
+  final GlobalKey<_MonthlyHistoryViewState> _monthlyViewKey = GlobalKey();
+
+  void _refreshData() {
+    _weeklyViewKey.currentState?._loadRecords();
+    _monthlyViewKey.currentState?._loadRecords();
+  }
+
+  void _navigateAndRefresh(Widget screen) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (context) => screen),
+    );
+    _refreshData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -21,17 +40,13 @@ class HistoryScreen extends StatelessWidget {
       child: Scaffold(
         appBar: AppBar(
           title: const Text('睡眠の履歴'),
-          actions: [ // ▼▼▼ このactionsプロパティを追加 ▼▼▼
+          actions: [
             IconButton(
               icon: const Icon(Icons.add),
               tooltip: '手動で記録を追加',
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const ManualSleepEntryScreen()),
-                );
-              },
+              onPressed: () => _navigateAndRefresh(const SleepEditScreen()),
             ),
-          ], // ▲▲▲ ここまで ▲▲▲
+          ],
           bottom: const TabBar(
             tabs: [
               Tab(text: '週表示'),
@@ -40,11 +55,11 @@ class HistoryScreen extends StatelessWidget {
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
-            WeeklyHistoryView(),
-            MonthlyHistoryView(),
-            AnalysisReportView(),
+            WeeklyHistoryView(key: _weeklyViewKey),
+            MonthlyHistoryView(key: _monthlyViewKey),
+            const AnalysisReportView(),
           ],
         ),
       ),
@@ -76,7 +91,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
 
   void _navigateToEditScreen(SleepRecord record) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => PostSleepInputScreen(initialRecord: record)),
+      MaterialPageRoute(builder: (context) => SleepEditScreen(existingRecord: record)),
     );
     _loadRecords();
   }
@@ -92,7 +107,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
 
         final allRecords = snapshot.data!;
         final today = getLogicalDate(DateTime.now());
-        final recordsForDisplay = allRecords.where((r) => today.difference(getLogicalDate(r.sleepTime)).inDays < 7).toList();
+        final recordsForDisplay = allRecords.where((r) => today.difference(r.recordDate).inDays < 7).toList();
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -187,7 +202,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
         title: Row(children: [
           Expanded(
             child: Text(
-              '${DateFormat('M/d(E)', 'ja_JP').format(getLogicalDate(record.sleepTime))}の睡眠',
+              '${DateFormat('M/d(E)', 'ja_JP').format(record.recordDate)}の睡眠',
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -197,7 +212,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
         ]),
         subtitle: Text('''睡眠時間: ${record.duration.inHours}h ${record.duration.inMinutes.remainder(60)}m
 ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(record.wakeUpTime)}'''),
-        onLongPress: () => _navigateToEditScreen(record),
+        onTap: () => _navigateToEditScreen(record),
         isThreeLine: true,
       ),
     );
@@ -262,9 +277,8 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
-              interval: 1, // ラベルの描画間隔を1に固定
+              interval: 1,
               getTitlesWidget: (value, meta) {
-                // 小数点の値に対してはラベルを描画しないようにする
                 if (value.toInt().toDouble() != value) {
                   return const Text('');
                 }
@@ -302,8 +316,7 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
     final List<double> dailySleep = List.filled(7, 0.0);
     final today = getLogicalDate(DateTime.now());
     for (final record in records) {
-      final recordDate = getLogicalDate(record.sleepTime);
-      final difference = today.difference(recordDate).inDays;
+      final difference = today.difference(record.recordDate).inDays;
       if (difference >= 0 && difference < 7) {
         dailySleep[6 - difference] += record.duration.inMinutes / 60.0;
       }
@@ -357,7 +370,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
 
   void _navigateToEditScreen(SleepRecord record) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => PostSleepInputScreen(initialRecord: record)),
+      MaterialPageRoute(builder: (context) => SleepEditScreen(existingRecord: record)),
     );
     _loadRecords();
   }
@@ -372,7 +385,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
         if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('記録なし'));
 
         final allRecords = snapshot.data!;
-        final recordsForDisplay = allRecords.where((r) => getLogicalDate(r.sleepTime).year == _displayMonth.year && getLogicalDate(r.sleepTime).month == _displayMonth.month).toList();
+        final recordsForDisplay = allRecords.where((r) => r.recordDate.year == _displayMonth.year && r.recordDate.month == _displayMonth.month).toList();
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -504,7 +517,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
         title: Row(children: [
           Expanded(
             child: Text(
-              '${DateFormat('M/d(E)', 'ja_JP').format(getLogicalDate(record.sleepTime))}の睡眠',
+              '${DateFormat('M/d(E)', 'ja_JP').format(record.recordDate)}の睡眠',
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -514,7 +527,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
         ]),
         subtitle: Text('''睡眠時間: ${record.duration.inHours}h ${record.duration.inMinutes.remainder(60)}m
 ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(record.wakeUpTime)}'''),
-        onLongPress: () => _navigateToEditScreen(record),
+        onTap: () => _navigateToEditScreen(record),
         isThreeLine: true,
       ),
     );
@@ -622,9 +635,8 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
     final daysInMonth = DateUtils.getDaysInMonth(displayMonth.year, displayMonth.month);
     final List<double> dailySleep = List.filled(daysInMonth, 0.0);
     for (final record in records) {
-      final logicalDate = getLogicalDate(record.sleepTime);
-      if (logicalDate.year == displayMonth.year && logicalDate.month == displayMonth.month) {
-        dailySleep[logicalDate.day - 1] += record.duration.inMinutes / 60.0;
+      if (record.recordDate.year == displayMonth.year && record.recordDate.month == displayMonth.month) {
+        dailySleep[record.recordDate.day - 1] += record.duration.inMinutes / 60.0;
       }
     }
     return List.generate(daysInMonth, (index) {

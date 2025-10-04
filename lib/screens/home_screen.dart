@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
-import 'post_sleep_input_screen.dart';
+import 'sleep_edit_screen.dart'; // Updated import
 import 'history_screen.dart';
 import 'settings_screen.dart';
 import 'ranking_screen.dart';
@@ -40,13 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     await _loadSleepSession();
     await _updateTopArea();
-    final record = await DatabaseHelper.instance.getRecordForDate(DateTime.now());
-    if (mounted) {
-      setState(() {
-        _todayRecord = record;
-        _isDrowsinessRecordable = record != null && !record.hadDaytimeDrowsiness;
-      });
-    }
+    // TODO: This needs to be updated to use the new recordDate logic
+    // final record = await DatabaseHelper.instance.getRecordForDate(DateTime.now());
+    // if (mounted) {
+    //   setState(() {
+    //     _todayRecord = record;
+    //     _isDrowsinessRecordable = record != null && !record.hadDaytimeDrowsiness;
+    //   });
+    // }
   }
 
   Future<void> _loadSleepSession() async {
@@ -149,9 +149,9 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.remove(_sleepStartTimeKey);
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => PostSleepInputScreen(
-          sleepTime: _sleepStartTime!,
-          wakeUpTime: wakeUpTime,
+        builder: (context) => SleepEditScreen( // Navigate to the new screen
+          initialSleepTime: _sleepStartTime!,
+          initialWakeUpTime: wakeUpTime,
         ),
       ),
     );

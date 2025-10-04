@@ -1,8 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:intl/intl.dart';
 import '../models/sleep_record.dart';
-import './api_service.dart';
 import '../utils/date_helper.dart';
 
 // Web用のインメモリデータベースヘルパー（shared_preferencesで永続化）
@@ -10,13 +8,16 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   DatabaseHelper._init();
 
-  final ApiService _apiService = ApiService();
   final List<SleepRecord> _inMemoryDb = [];
-  int _idCounter = 0;
   bool _isInitialized = false;
-  static const _kSleepRecordsKey = 'sleep_records_json';
+  static const _kSleepRecordsKey = 'sleep_records_json_v2'; // Use a new key for v2
 
-  // データの読み込み（初回のみ実行）
+  // Dummy getter for mobile compatibility (e.g., for migration script)
+  Future<dynamic> get database async {
+    await _ensureInitialized();
+    return null; // Return null or a mock object, as it's not used on web
+  }
+
   Future<void> _ensureInitialized() async {
     if (_isInitialized) return;
 
@@ -24,18 +25,18 @@ class DatabaseHelper {
     final jsonString = prefs.getString(_kSleepRecordsKey);
 
     if (jsonString != null) {
-      final List<dynamic> jsonList = jsonDecode(jsonString);
-      _inMemoryDb.clear();
-      _inMemoryDb.addAll(jsonList.map((json) => SleepRecord.fromMap(json as Map<String, dynamic>)));
-
-      if (_inMemoryDb.isNotEmpty) {
-        _idCounter = _inMemoryDb.map((r) => r.id ?? 0).reduce((max, current) => max > current ? max : current) + 1;
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        _inMemoryDb.clear();
+        _inMemoryDb.addAll(jsonList.map((json) => SleepRecord.fromMap(json as Map<String, dynamic>)));
+      } catch (e) {
+        // Handle potential parsing errors with old/corrupt data
+        await prefs.remove(_kSleepRecordsKey);
       }
     }
     _isInitialized = true;
   }
 
-  // データの保存
   Future<void> _persistData() async {
     final prefs = await SharedPreferences.getInstance();
     final List<Map<String, dynamic>> jsonList = _inMemoryDb.map((r) => r.toMap()).toList();
@@ -43,37 +44,17 @@ class DatabaseHelper {
     await prefs.setString(_kSleepRecordsKey, jsonString);
   }
 
-  Future<void> _syncWithServer(SleepRecord record) async {
-    final prefs = await SharedPreferences.getInstance();
-    final isRankingEnabled = prefs.getBool('rankingParticipation') ?? false;
-    final userId = prefs.getString('userId');
-
-    if (isRankingEnabled && userId != null) {
-      final localSleepTime = record.sleepTime.toLocal();
-      DateTime effectiveDate = localSleepTime;
-      if (localSleepTime.hour < 4) {
-        effectiveDate = effectiveDate.subtract(const Duration(days: 1));
-      }
-      final date = DateFormat('yyyy-MM-dd').format(effectiveDate);
-      final duration = record.wakeUpTime.difference(record.sleepTime).inMinutes;
-
-      await _apiService.submitRecord(userId, duration, date);
-    }
-  }
-
   Future<SleepRecord> create(SleepRecord record) async {
     await _ensureInitialized();
-    final newRecord = record.copyWith(id: _idCounter++);
-    _inMemoryDb.add(newRecord);
+    _inMemoryDb.add(record);
     await _persistData();
-    await _syncWithServer(newRecord);
-    return newRecord;
+    return record;
   }
 
-  Future<SleepRecord?> readRecord(int id) async {
+  Future<SleepRecord?> readRecord(String dataId) async {
     await _ensureInitialized();
     try {
-      return _inMemoryDb.firstWhere((record) => record.id == id);
+      return _inMemoryDb.firstWhere((record) => record.dataId == dataId);
     } catch (e) {
       return null;
     }
@@ -88,20 +69,19 @@ class DatabaseHelper {
 
   Future<int> update(SleepRecord record) async {
     await _ensureInitialized();
-    final index = _inMemoryDb.indexWhere((r) => r.id == record.id);
+    final index = _inMemoryDb.indexWhere((r) => r.dataId == record.dataId);
     if (index != -1) {
       _inMemoryDb[index] = record;
       await _persistData();
-      await _syncWithServer(record);
       return 1;
     }
     return 0;
   }
 
-  Future<int> delete(int id) async {
+  Future<int> delete(String dataId) async {
     await _ensureInitialized();
     final initialLength = _inMemoryDb.length;
-    _inMemoryDb.removeWhere((r) => r.id == id);
+    _inMemoryDb.removeWhere((r) => r.dataId == dataId);
     if (initialLength > _inMemoryDb.length) {
       await _persistData();
       return 1;
@@ -109,7 +89,6 @@ class DatabaseHelper {
     return 0;
   }
 
-  // Add this method to delete all records for web
   Future<int> deleteAllRecords() async {
     await _ensureInitialized();
     final recordsDeleted = _inMemoryDb.length;
@@ -139,7 +118,7 @@ class DatabaseHelper {
     final targetLogicalDate = getLogicalDate(date);
 
     for (var record in _inMemoryDb) {
-      if (getLogicalDate(record.sleepTime) == targetLogicalDate) {
+      if (record.recordDate == targetLogicalDate) {
         return record;
       }
     }
@@ -147,6 +126,6 @@ class DatabaseHelper {
   }
 
   Future close() async {
-    // Webでは何もしない
+    // No-op for web
   }
 }
