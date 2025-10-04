@@ -18,7 +18,7 @@ class SupabaseRankingService {
 
     final response = await _supabase
         .from('sleep_records')
-        .select('sleep_duration, created_at, users!inner(id, username)') // inner join to ensure user exists
+        .select('sleep_duration, created_at, users!inner(id, username, background_preference)') // inner join to ensure user exists
         .eq('date', targetDate)
         .order('created_at', ascending: false);
 
@@ -34,6 +34,20 @@ class SupabaseRankingService {
     sortedRecords.sort((a, b) => (b['sleep_duration'] as int).compareTo(a['sleep_duration'] as int));
 
     return sortedRecords.take(20).toList();
+  }
+
+  Future<Map<String, dynamic>?> getUser(String userId) async {
+    try {
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .single();
+      return response;
+    } catch (e) {
+      // Handle cases where user is not found or other errors
+      return null;
+    }
   }
 
   Future<void> submitRecord({
@@ -53,16 +67,26 @@ class SupabaseRankingService {
     );
   }
 
-  Future<void> updateUser({required String id, required String username}) async {
+  Future<void> updateUser({required String id, required String username, String? backgroundPreference, int? sleepCoins}) async {
     if (username.length > 20) {
       throw Exception('Username cannot be longer than 20 characters');
     }
     try {
+      final Map<String, dynamic> updateData = {
+        'id': id,
+        'username': username,
+      };
+
+      if (backgroundPreference != null) {
+        updateData['background_preference'] = backgroundPreference;
+      }
+
+      if (sleepCoins != null) {
+        updateData['sleep_coins'] = sleepCoins;
+      }
+
       await _supabase.from('users').upsert(
-        {
-          'id': id,
-          'username': username,
-        },
+        updateData,
         onConflict: 'id',
       );
     } on PostgrestException catch (e) {
@@ -77,5 +101,27 @@ class SupabaseRankingService {
     // With 'ON DELETE CASCADE' set on the foreign key in Supabase,
     // deleting a user will automatically delete all their sleep_records.
     await _supabase.from('users').delete().eq('id', userId);
+  }
+
+  // --- Shop Feature Methods ---
+
+  Future<List<String>> getUnlockedBackgrounds(String userId) async {
+    try {
+      final response = await _supabase
+          .from('user_unlocked_backgrounds')
+          .select('background_id')
+          .eq('user_id', userId);
+      return response.map((item) => item['background_id'] as String).toList();
+    } catch (e) {
+      return []; // Return empty list on error
+    }
+  }
+
+  Future<void> purchaseBackground({required String userId, required String backgroundId, required int cost}) async {
+    await _supabase.rpc('purchase_background', params: {
+      'p_user_id': userId,
+      'p_background_id': backgroundId,
+      'p_cost': cost,
+    });
   }
 }

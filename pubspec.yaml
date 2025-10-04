@@ -80,6 +80,7 @@ flutter:
   assets:
     - assets/data/quotes.json
     - .env
+    - assets/images/backgrounds/
 
   fonts:
     - family: MPLUSRounded1c

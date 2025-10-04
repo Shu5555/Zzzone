@@ -9,6 +9,7 @@ import 'sleep_edit_screen.dart'; // Updated import
 import 'history_screen.dart';
 import 'settings_screen.dart';
 import 'ranking_screen.dart';
+import 'shop_screen.dart'; // Import the shop screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -39,14 +40,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     await _loadSleepSession();
     await _updateTopArea();
-    // TODO: This needs to be updated to use the new recordDate logic
-    // final record = await DatabaseHelper.instance.getRecordForDate(DateTime.now());
-    // if (mounted) {
-    //   setState(() {
-    //     _todayRecord = record;
-    //     _isDrowsinessRecordable = record != null && !record.hadDaytimeDrowsiness;
-    //   });
-    // }
+    final record = await DatabaseHelper.instance.getRecordForDate(DateTime.now());
+    if (mounted) {
+      setState(() {
+        _todayRecord = record;
+        _isDrowsinessRecordable = record != null && !record.hadDaytimeDrowsiness;
+      });
+    }
   }
 
   Future<void> _loadSleepSession() async {
@@ -191,6 +191,10 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Zzzone'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.store_outlined),
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ShopScreen())),
+          ),
           IconButton(
             icon: const Icon(Icons.leaderboard_outlined),
             onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RankingScreen())),
