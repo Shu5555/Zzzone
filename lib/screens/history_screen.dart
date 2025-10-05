@@ -123,6 +123,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
   }
 
   Widget _buildCompactLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -131,7 +132,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
           child: Text('過去7日間の睡眠時間', style: Theme.of(context).textTheme.titleLarge),
         ),
         AspectRatio(
-          aspectRatio: 1.7,
+          aspectRatio: isLandscape ? 3.0 : 1.7,
           child: recordsForDisplay.isEmpty
               ? const Center(child: Text('データなし'))
               : Padding(
@@ -156,6 +157,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
   }
 
   Widget _buildWideLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -168,7 +170,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
               children: [
                 Text('過去7日間の睡眠時間', style: Theme.of(context).textTheme.titleLarge),
                 AspectRatio(
-                  aspectRatio: 1.7,
+                  aspectRatio: isLandscape ? 3.0 : 1.7,
                   child: recordsForDisplay.isEmpty
                       ? const Center(child: Text('データなし'))
                       : _buildWeeklyChart(recordsForDisplay),
@@ -401,6 +403,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
   }
 
   Widget _buildCompactLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -413,7 +416,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
           ],
         ),
         AspectRatio(
-          aspectRatio: 1.7,
+          aspectRatio: isLandscape ? 3.0 : 1.7,
           child: recordsForDisplay.isEmpty
               ? const Center(child: Text('データなし'))
               : Padding(
@@ -452,6 +455,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
   }
 
   Widget _buildWideLayout(BuildContext context, List<SleepRecord> recordsForDisplay) {
+    final isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -471,7 +475,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
                   ],
                 ),
                 AspectRatio(
-                  aspectRatio: 1.7,
+                  aspectRatio: isLandscape ? 3.0 : 1.7,
                   child: recordsForDisplay.isEmpty
                       ? const Center(child: Text('データなし'))
                       : _buildMonthlyChart(recordsForDisplay, _displayMonth),
