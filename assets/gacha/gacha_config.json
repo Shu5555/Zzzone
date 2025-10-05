@@ -1,0 +1,44 @@
+{
+  "costs": {
+    "singlePull": 100,
+    "multiPull": 900,
+    "multiPullCount": 10
+  },
+  "rarities": [
+    {
+      "id": "common",
+      "name": "コモン",
+      "color": "#9E9E9E",
+      "order": 1,
+      "probability": 0.734
+    },
+    {
+      "id": "rare",
+      "name": "レア",
+      "color": "#2196F3",
+      "order": 2,
+      "probability": 0.20
+    },
+    {
+      "id": "super_rare",
+      "name": "激レア",
+      "color": "#9C27B0",
+      "order": 3,
+      "probability": 0.05
+    },
+    {
+      "id": "ultra_rare",
+      "name": "超激レア",
+      "color": "#FFC107",
+      "order": 4,
+      "probability": 0.01
+    },
+    {
+      "id": "own_chin",
+      "name": "OWN_CHIN",
+      "color": "#E91E63",
+      "order": 5,
+      "probability": 0.006
+    }
+  ]
+}

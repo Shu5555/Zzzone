@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
+import 'dart:math';
 
 class SupabaseRankingService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -40,7 +41,7 @@ class SupabaseRankingService {
     try {
       final response = await _supabase
           .from('users')
-          .select()
+          .select('*, favorite_quote_id') // Ensure favorite_quote_id is fetched
           .eq('id', userId)
           .single();
       return response;
@@ -123,5 +124,20 @@ class SupabaseRankingService {
       'p_background_id': backgroundId,
       'p_cost': cost,
     });
+  }
+
+  // --- Gacha Feature Methods (New Architecture) ---
+
+  /// Deducts coins for a gacha pull.
+  Future<void> deductCoinsForGacha(String userId, int cost) async {
+    await _supabase.rpc('deduct_coins_for_gacha', params: {
+      'p_user_id': userId,
+      'p_cost': cost,
+    });
+  }
+
+  /// Sets the user's favorite quote to be displayed on the home screen.
+  Future<void> setFavoriteQuote(String userId, String? quoteId) async {
+    await _supabase.from('users').update({'favorite_quote_id': quoteId}).eq('id', userId);
   }
 }

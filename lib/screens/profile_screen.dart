@@ -18,6 +18,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _usernameController = TextEditingController();
   final _supabaseService = SupabaseRankingService();
 
+  // State variables
   bool _isRankingEnabled = false;
   String? _userId;
   int _sleepCoins = 0;
@@ -41,6 +42,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfileData() async {
     setState(() => _isLoading = true);
+
     final prefs = await SharedPreferences.getInstance();
     _usernameController.text = prefs.getString('userName') ?? '';
     _isRankingEnabled = prefs.getBool('isRankingEnabled') ?? false;
@@ -83,7 +85,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
       if (_isRankingEnabled && currentUserId != null) {
         if (isNewUser) {
-          // Grant initial coins for new users in debug mode
           int initialCoins = 0;
           if (kDebugMode) {
             initialCoins = 10000;
@@ -93,10 +94,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             username: _usernameController.text,
             sleepCoins: initialCoins,
           );
-          // Also update local state
           setState(() => _sleepCoins = initialCoins);
         } else {
-          // Regular update for existing users
+          // For existing users, save background preference
           await _supabaseService.updateUser(
             id: currentUserId,
             username: _usernameController.text,
@@ -122,10 +122,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         setState(() => _isSaving = false);
       }
     }
-  }
-
-  Future<void> _deleteRankingData() async {
-    // ... (omitted for brevity, no changes here)
   }
 
   @override
@@ -183,80 +179,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const Divider(),
                     ListTile(
-                      leading: const Icon(Icons.palette_outlined),
-                      title: const Text('ランキングの背景'),
-                      subtitle: Text('現在の背景: $_selectedBackground'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () async {
-                        if (_userId == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ランキングを有効にしてください')));
-                          return;
-                        }
-
-                        final unlockedIds = await _supabaseService.getUnlockedBackgrounds(_userId!);
-                        
-                        final Map<String, dynamic> availableOptions = {
-                          'default': {'type': 'color', 'color': Theme.of(context).cardColor, 'name': 'Default (Transparent)'},
-                          'color_#ffffff': {'type': 'color', 'color': const Color(0xffffffff), 'name': 'White'},
-                        };
-
-                        for (var item in backgroundShopCatalog) {
-                          if (unlockedIds.contains(item.id)) {
-                            availableOptions[item.id] = {'type': 'color', 'color': item.previewColor, 'name': item.name};
-                          }
-                        }
-
-                        final result = await showModalBottomSheet<String>(
-                          context: context,
-                          builder: (context) => GridView.builder(
-                            padding: const EdgeInsets.all(16.0),
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 4,
-                              crossAxisSpacing: 10,
-                              mainAxisSpacing: 10,
-                            ),
-                            itemCount: availableOptions.length,
-                            itemBuilder: (context, index) {
-                              final key = availableOptions.keys.elementAt(index);
-                              final option = availableOptions[key]!;
-                              final bool isSelected = key == _selectedBackground;
-
-                              return GestureDetector(
-                                onTap: () => Navigator.of(context).pop(key),
-                                child: Tooltip(
-                                  message: option['name'],
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: option['color'],
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: isSelected ? Border.all(color: Theme.of(context).primaryColor, width: 3) : Border.all(color: Colors.grey.withOpacity(0.5)),
-                                    ),
-                                    clipBehavior: Clip.antiAlias,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-
-                        if (result != null) {
-                          setState(() {
-                            _selectedBackground = result;
-                            _hasChanges = true;
-                          });
-                        }
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
                       leading: const Icon(Icons.monetization_on_outlined),
                       title: const Text('所持スリープコイン'),
                       trailing: Text('$_sleepCoins C', style: Theme.of(context).textTheme.titleMedium),
                     ),
+                    const Divider(),
+                    _buildBackgroundSelector(), // Existing Background Selector
                   ],
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildBackgroundSelector() {
+    return ListTile(
+      leading: const Icon(Icons.palette_outlined),
+      title: const Text('ランキングの背景'),
+      subtitle: Text('現在の背景: $_selectedBackground'),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () async {
+        if (_userId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('ランキングを有効にしてください')));
+          return;
+        }
+
+        final unlockedIds = await _supabaseService.getUnlockedBackgrounds(_userId!);
+        
+        final Map<String, dynamic> availableOptions = {
+          'default': {'type': 'color', 'color': Theme.of(context).cardColor, 'name': 'Default (Transparent)'},
+          'color_#ffffff': {'type': 'color', 'color': const Color(0xffffffff), 'name': 'White'},
+        };
+
+        for (var item in backgroundShopCatalog) {
+          if (unlockedIds.contains(item.id)) {
+            availableOptions[item.id] = {'type': 'color', 'color': item.previewColor, 'name': item.name};
+          }
+        }
+
+        final result = await showModalBottomSheet<String>(
+          context: context,
+          builder: (context) => GridView.builder(
+            padding: const EdgeInsets.all(16.0),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 4,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
+            ),
+            itemCount: availableOptions.length,
+            itemBuilder: (context, index) {
+              final key = availableOptions.keys.elementAt(index);
+              final option = availableOptions[key]!;
+              final bool isSelected = key == _selectedBackground;
+
+              return GestureDetector(
+                onTap: () => Navigator.of(context).pop(key),
+                child: Tooltip(
+                  message: option['name'],
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: option['color'],
+                      borderRadius: BorderRadius.circular(8),
+                      border: isSelected ? Border.all(color: Theme.of(context).primaryColor, width: 3) : Border.all(color: Colors.grey.withOpacity(0.5)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                  ),
+                ),
+              );
+            },
+          ),
+        );
+
+        if (result != null) {
+          setState(() {
+            _selectedBackground = result;
+            _hasChanges = true;
+          });
+        }
+      },
     );
   }
 }

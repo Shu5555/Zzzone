@@ -78,9 +78,9 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/data/quotes.json
     - .env
-    - assets/images/backgrounds/
+    - assets/images/
+    - assets/gacha/
 
   fonts:
     - family: MPLUSRounded1c

@@ -4,20 +4,34 @@ import 'package:uuid/uuid.dart';
 import '../models/sleep_record.dart';
 import '../utils/date_helper.dart';
 
+// Helper class for Gacha History
+class GachaPullRecord {
+  final String quoteId;
+  final String rarityId;
+  final DateTime pulledAt;
+  GachaPullRecord({required this.quoteId, required this.rarityId, required this.pulledAt});
+}
+
 // Web用のインメモリデータベースヘルパー（shared_preferencesで永続化）
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   DatabaseHelper._init();
 
+  // In-memory stores
   final List<SleepRecord> _inMemoryDb = [];
+  final List<String> _unlockedQuotes = [];
+  final List<Map<String, String>> _gachaHistory = [];
   bool _isInitialized = false;
+
+  // SharedPreferences keys
   static const _kSleepRecordsKeyV2 = 'sleep_records_json_v2';
   static const _kSleepRecordsKeyV1 = 'sleep_records_json';
+  static const _kUnlockedQuotesKey = 'unlocked_quotes_json';
+  static const _kGachaHistoryKey = 'gacha_history_json';
 
-  // Dummy getter for mobile compatibility (e.g., for migration script)
   Future<dynamic> get database async {
     await _ensureInitialized();
-    return null; // Return null or a mock object, as it's not used on web
+    return null;
   }
 
   Future<void> _ensureInitialized() async {
@@ -25,39 +39,36 @@ class DatabaseHelper {
 
     final prefs = await SharedPreferences.getInstance();
     
-    // 1. Try to load v2 data first
-    String? jsonString = prefs.getString(_kSleepRecordsKeyV2);
+    _loadSleepRecords(prefs);
+    _loadUnlockedQuotes(prefs);
+    _loadGachaHistory(prefs);
 
+    _isInitialized = true;
+  }
+
+  void _loadSleepRecords(SharedPreferences prefs) {
+    String? jsonString = prefs.getString(_kSleepRecordsKeyV2);
     if (jsonString != null) {
-      // V2 data exists, load it
       try {
         final List<dynamic> jsonList = jsonDecode(jsonString);
         _inMemoryDb.clear();
         _inMemoryDb.addAll(jsonList.map((json) => SleepRecord.fromMap(json as Map<String, dynamic>)));
-      } catch (e) {
-        await prefs.remove(_kSleepRecordsKeyV2);
-      }
+      } catch (e) { /* Handle error */ }
     } else {
-      // 2. V2 data doesn't exist, try to load and migrate V1 data
       jsonString = prefs.getString(_kSleepRecordsKeyV1);
       if (jsonString != null) {
         try {
           final List<dynamic> oldJsonList = jsonDecode(jsonString);
           final List<SleepRecord> migratedRecords = [];
-
           for (final oldMap in oldJsonList) {
-            // V1 data might not have all fields, provide defaults
             final sleepTimeUTC = DateTime.parse(oldMap['sleepTime']);
             final wakeUpTimeUTC = DateTime.parse(oldMap['wakeUpTime']);
-            final sleepTimeLocal = sleepTimeUTC.toLocal();
-            final wakeUpTimeLocal = wakeUpTimeUTC.toLocal();
-
             migratedRecords.add(SleepRecord(
               dataId: const Uuid().v4(),
-              recordDate: getLogicalDate(wakeUpTimeLocal),
+              recordDate: getLogicalDate(wakeUpTimeUTC.toLocal()),
               spec_version: 2,
-              sleepTime: sleepTimeLocal,
-              wakeUpTime: wakeUpTimeLocal,
+              sleepTime: sleepTimeUTC.toLocal(),
+              wakeUpTime: wakeUpTimeUTC.toLocal(),
               score: oldMap['score'] ?? 5,
               performance: oldMap['performance'] ?? 2,
               hadDaytimeDrowsiness: oldMap['hadDaytimeDrowsiness'] == 1,
@@ -68,41 +79,58 @@ class DatabaseHelper {
           }
           _inMemoryDb.clear();
           _inMemoryDb.addAll(migratedRecords);
-          
-          // 3. Persist migrated data to new key and remove old key
-          await _persistData();
-          await prefs.remove(_kSleepRecordsKeyV1);
-
-        } catch (e) {
-          await prefs.remove(_kSleepRecordsKeyV1);
-        }
+          _persistSleepRecords();
+          prefs.remove(_kSleepRecordsKeyV1);
+        } catch (e) { /* Handle error */ }
       }
     }
-
-    _isInitialized = true;
   }
 
-  Future<void> _persistData() async {
+  void _loadUnlockedQuotes(SharedPreferences prefs) {
+    final jsonString = prefs.getString(_kUnlockedQuotesKey);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        _unlockedQuotes.clear();
+        _unlockedQuotes.addAll(jsonList.cast<String>());
+      } catch (e) { /* Handle error */ }
+    }
+  }
+
+  void _loadGachaHistory(SharedPreferences prefs) {
+    final jsonString = prefs.getString(_kGachaHistoryKey);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        _gachaHistory.clear();
+        _gachaHistory.addAll(jsonList.map((item) => Map<String, String>.from(item)));
+      } catch (e) { /* Handle error */ }
+    }
+  }
+
+  Future<void> _persistSleepRecords() async {
     final prefs = await SharedPreferences.getInstance();
     final List<Map<String, dynamic>> jsonList = _inMemoryDb.map((r) => r.toMap()).toList();
-    final jsonString = jsonEncode(jsonList);
-    await prefs.setString(_kSleepRecordsKeyV2, jsonString);
+    await prefs.setString(_kSleepRecordsKeyV2, jsonEncode(jsonList));
   }
+
+  Future<void> _persistUnlockedQuotes() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kUnlockedQuotesKey, jsonEncode(_unlockedQuotes));
+  }
+
+  Future<void> _persistGachaHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kGachaHistoryKey, jsonEncode(_gachaHistory));
+  }
+
+  // --- SleepRecord Methods ---
 
   Future<SleepRecord> create(SleepRecord record) async {
     await _ensureInitialized();
     _inMemoryDb.add(record);
-    await _persistData();
+    await _persistSleepRecords();
     return record;
-  }
-
-  Future<SleepRecord?> readRecord(String dataId) async {
-    await _ensureInitialized();
-    try {
-      return _inMemoryDb.firstWhere((record) => record.dataId == dataId);
-    } catch (e) {
-      return null;
-    }
   }
 
   Future<List<SleepRecord>> readAllRecords() async {
@@ -110,9 +138,7 @@ class DatabaseHelper {
     final sortedList = List<SleepRecord>.from(_inMemoryDb);
     sortedList.sort((a, b) {
       int dateCompare = b.recordDate.compareTo(a.recordDate);
-      if (dateCompare != 0) {
-        return dateCompare;
-      }
+      if (dateCompare != 0) return dateCompare;
       return b.wakeUpTime.compareTo(a.wakeUpTime);
     });
     return sortedList;
@@ -123,7 +149,7 @@ class DatabaseHelper {
     final index = _inMemoryDb.indexWhere((r) => r.dataId == record.dataId);
     if (index != -1) {
       _inMemoryDb[index] = record;
-      await _persistData();
+      await _persistSleepRecords();
       return 1;
     }
     return 0;
@@ -134,46 +160,57 @@ class DatabaseHelper {
     final initialLength = _inMemoryDb.length;
     _inMemoryDb.removeWhere((r) => r.dataId == dataId);
     if (initialLength > _inMemoryDb.length) {
-      await _persistData();
+      await _persistSleepRecords();
       return 1;
     }
     return 0;
   }
 
-  Future<int> deleteAllRecords() async {
-    await _ensureInitialized();
-    final recordsDeleted = _inMemoryDb.length;
-    _inMemoryDb.clear();
-    await _persistData();
-    return recordsDeleted;
-  }
-
-  Future<SleepRecord?> getLatestRecord() async {
-    await _ensureInitialized();
-    if (_inMemoryDb.isEmpty) return null;
-    final sortedList = List<SleepRecord>.from(_inMemoryDb);
-    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
-    return sortedList.first;
-  }
-
-  Future<List<SleepRecord>> getLatestRecords({int limit = 3}) async {
-    await _ensureInitialized();
-    if (_inMemoryDb.isEmpty) return [];
-    final sortedList = List<SleepRecord>.from(_inMemoryDb);
-    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
-    return sortedList.take(limit).toList();
-  }
-
   Future<SleepRecord?> getRecordForDate(DateTime date) async {
     await _ensureInitialized();
     final targetLogicalDate = getLogicalDate(date);
-
     for (var record in _inMemoryDb) {
       if (record.recordDate == targetLogicalDate) {
         return record;
       }
     }
     return null;
+  }
+
+  // --- Gacha Quote Methods ---
+
+  Future<void> addUnlockedQuote(String quoteId) async {
+    await _ensureInitialized();
+    if (!_unlockedQuotes.contains(quoteId)) {
+      _unlockedQuotes.add(quoteId);
+      await _persistUnlockedQuotes();
+    }
+  }
+
+  Future<List<String>> getUnlockedQuoteIds() async {
+    await _ensureInitialized();
+    return List<String>.from(_unlockedQuotes.reversed);
+  }
+
+  Future<void> addGachaPull(String quoteId, String rarityId) async {
+    await _ensureInitialized();
+    _gachaHistory.add({
+      'quote_id': quoteId,
+      'rarity_id': rarityId,
+      'pulled_at': DateTime.now().toIso8601String(),
+    });
+    await _persistGachaHistory();
+  }
+
+  Future<List<GachaPullRecord>> getGachaHistory() async {
+    await _ensureInitialized();
+    final sortedHistory = List<Map<String, String>>.from(_gachaHistory);
+    sortedHistory.sort((a, b) => b['pulled_at']!.compareTo(a['pulled_at']!));
+    return sortedHistory.map((row) => GachaPullRecord(
+      quoteId: row['quote_id']!,
+      rarityId: row['rarity_id']!,
+      pulledAt: DateTime.parse(row['pulled_at']!),
+    )).toList();
   }
 
   Future close() async {

@@ -1,15 +1,18 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../gacha/models/gacha_item.dart';
+import '../gacha/services/gacha_data_loader.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
-import 'sleep_edit_screen.dart'; // Updated import
+import '../services/supabase_ranking_service.dart';
 import 'history_screen.dart';
-import 'settings_screen.dart';
+import 'quote_list_screen.dart';
 import 'ranking_screen.dart';
-import 'shop_screen.dart'; // Import the shop screen
+import 'settings_screen.dart';
+import 'shop_screen.dart';
+import 'sleep_edit_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,17 +22,22 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const String _sleepStartTimeKey = 'sleep_start_time';
+  // Services
+  final _supabaseService = SupabaseRankingService();
 
+  // State
+  static const String _sleepStartTimeKey = 'sleep_start_time';
   bool _isSleeping = false;
   DateTime? _sleepStartTime;
   Timer? _timer;
   Duration _elapsed = Duration.zero;
   String _dailyQuote = '';
   String _dailyQuoteAuthor = '';
-
   SleepRecord? _todayRecord;
   bool _isDrowsinessRecordable = false;
+
+  // Gacha related state
+  List<GachaItem> _allGachaItems = [];
 
   @override
   void initState() {
@@ -39,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadData() async {
     await _loadSleepSession();
-    await _updateTopArea();
+    await _updateTopArea(); // This will now load the favorite quote
     final record = await DatabaseHelper.instance.getRecordForDate(DateTime.now());
     if (mounted) {
       setState(() {
@@ -65,50 +73,65 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _updateTopArea() async {
     try {
-      // 1. Load the default quote (Kant, etc.)
-      final String jsonString = await rootBundle.loadString('assets/data/quotes.json');
-      final List<dynamic> quotesList = jsonDecode(jsonString);
-      final now = DateTime.now();
-      final effectiveDate = now.hour < 4 ? now.subtract(const Duration(days: 1)) : now;
-      final dayOfYear = effectiveDate.difference(DateTime(effectiveDate.year, 1, 1)).inDays;
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('userId');
 
-      if (quotesList.isNotEmpty) {
-        final quoteIndex = dayOfYear % quotesList.length;
-        final quoteData = quotesList[quoteIndex] as Map<String, dynamic>;
-        _dailyQuote = quoteData['quote'] as String? ?? '';
-        _dailyQuoteAuthor = quoteData['author'] as String? ?? '';
+      if (userId == null) {
+        _dailyQuote = 'プロフィールからランキングに参加して、ガチャを引いてみよう！';
+        _dailyQuoteAuthor = 'Zzzone';
+        if (mounted) setState(() {});
+        return;
+      }
+
+      // Load all possible gacha items and user profile simultaneously
+      final results = await Future.wait([
+        GachaDataLoader.loadItems('assets/gacha/gacha_items.json'),
+        _supabaseService.getUser(userId),
+      ]);
+
+      _allGachaItems = results[0] as List<GachaItem>;
+      final userProfile = results[1] as Map<String, dynamic>?;
+      final favoriteQuoteId = userProfile?['favorite_quote_id'] as String?;
+
+      if (favoriteQuoteId == 'random') {
+        // Random Mode: Display a deterministic random quote of the day
+        final unlockedQuoteIds = await DatabaseHelper.instance.getUnlockedQuoteIds();
+        if (unlockedQuoteIds.isNotEmpty) {
+          final now = DateTime.now();
+          final dayOfYear = now.difference(DateTime(now.year, 1, 1)).inDays;
+          final quoteIdToShow = unlockedQuoteIds[dayOfYear % unlockedQuoteIds.length];
+          
+          final quote = _allGachaItems.firstWhere((item) => item.id == quoteIdToShow, orElse: () => GachaItem(id: 'not_found', rarityId: 'common'));
+          if (quote.id != 'not_found') {
+            _dailyQuote = quote.text ?? '';
+            _dailyQuoteAuthor = quote.author ?? '';
+          } else {
+            _dailyQuote = 'エラー: 名言が見つかりません。';
+            _dailyQuoteAuthor = 'Zzzone';
+          }
+        } else {
+          _dailyQuote = 'ガチャで名言を獲得して、日替わり表示を楽しもう！';
+          _dailyQuoteAuthor = 'Zzzone';
+        }
+      } else if (favoriteQuoteId != null) {
+        // Favorite Mode: Display the selected favorite quote
+        final quote = _allGachaItems.firstWhere((item) => item.id == favoriteQuoteId, orElse: () => GachaItem(id: 'not_found', rarityId: 'common'));
+        if (quote.id != 'not_found') {
+          _dailyQuote = quote.text ?? '';
+          _dailyQuoteAuthor = quote.author ?? '';
+          
+          
+        } else {
+          _dailyQuote = 'お気に入りの名言が見つかりません。設定し直してください。';
+          _dailyQuoteAuthor = 'Zzzone';
+        }
       } else {
-        // Fallback if quotes.json is empty
-        _dailyQuote = '今日を素晴らしい一日に。';
+        // No Favorite or Random mode set
+        _dailyQuote = '名言一覧からお気に入りを設定できます';
         _dailyQuoteAuthor = 'Zzzone';
       }
 
-      // 2. Check for conditions to show a special Zzzone comment
-      final prefs = await SharedPreferences.getInstance();
-      final dateString = '${effectiveDate.year}-${effectiveDate.month.toString().padLeft(2, '0')}-${effectiveDate.day.toString().padLeft(2, '0')}';
-      final zzzoneCommentShownKey = 'zzzone_comment_shown_$dateString';
-      final hasShownZzzoneComment = prefs.getBool(zzzoneCommentShownKey) ?? false;
-
-      final recentRecords = await DatabaseHelper.instance.getLatestRecords(limit: 3);
-      if (recentRecords.length == 3 && !hasShownZzzoneComment) {
-        final averageScore = recentRecords.map((r) => r.score).reduce((a, b) => a + b) / 3;
-        
-        String? zzzoneQuote;
-        if (averageScore <= 4) {
-          zzzoneQuote = '最近、スコアが低い日が続いていますね。今夜は少し早めに休んでみてはいかがでしょうか？';
-        } else if (averageScore >= 8) {
-          zzzoneQuote = '素晴らしい！スコアが高い日が続いています。その調子で良い睡眠を続けましょう！';
-        }
-
-        if (zzzoneQuote != null) {
-          _dailyQuote = zzzoneQuote;
-          _dailyQuoteAuthor = 'Zzzone';
-          // Mark as shown for today
-          await prefs.setBool(zzzoneCommentShownKey, true);
-        }
-      }
     } catch (e) {
-      // In case of any error, show a generic fallback
       _dailyQuote = '今日を素晴らしい一日に。';
       _dailyQuoteAuthor = 'Zzzone';
     }
@@ -169,7 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.remove(_sleepStartTimeKey);
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => SleepEditScreen( // Navigate to the new screen
+        builder: (context) => SleepEditScreen(
           initialSleepTime: _sleepStartTime!,
           initialWakeUpTime: wakeUpTime,
         ),
@@ -183,18 +206,11 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _navigateToHistory() async {
+  void _navigateTo(Widget screen) async {
     await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const HistoryScreen()),
+      MaterialPageRoute(builder: (_) => screen),
     );
-    _loadData();
-  }
-
-  void _navigateToSettings() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
-    _loadData();
+    _loadData(); // Refresh data when returning to home screen
   }
 
   String _formatDuration(Duration duration) {
@@ -212,15 +228,31 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Zzzone'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.store_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ShopScreen())),
+            icon: const Icon(Icons.format_quote_outlined),
+            tooltip: '名言一覧',
+            onPressed: () => _navigateTo(const QuoteListScreen()),
+          ),
+          // New Gacha Shortcut Button
+          IconButton(
+            icon: const Icon(Icons.card_giftcard_outlined),
+            tooltip: 'ガチャ',
+            onPressed: () => _navigateTo(const ShopScreen()),
           ),
           IconButton(
             icon: const Icon(Icons.leaderboard_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const RankingScreen())),
+            tooltip: 'ランキング',
+            onPressed: () => _navigateTo(const RankingScreen()),
           ),
-          IconButton(icon: const Icon(Icons.settings), onPressed: _navigateToSettings),
-          IconButton(icon: const Icon(Icons.history), onPressed: _navigateToHistory),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            tooltip: '設定',
+            onPressed: () => _navigateTo(const SettingsScreen()),
+          ),
+          IconButton(
+            icon: const Icon(Icons.history_outlined),
+            tooltip: '履歴',
+            onPressed: () => _navigateTo(const HistoryScreen()),
+          ),
         ],
       ),
       body: Center(

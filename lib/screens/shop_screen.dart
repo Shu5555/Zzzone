@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sleep_management_app/services/supabase_ranking_service.dart';
+import '../gacha/screens/gacha_history_screen.dart';
+import '../gacha/screens/gacha_screen.dart';
 import '../models/shop_item.dart';
 
 class ShopScreen extends StatefulWidget {
@@ -14,23 +16,26 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   final _supabaseService = SupabaseRankingService();
   late Future<Map<String, dynamic>> _shopDataFuture;
   String? _userId;
-  TabController? _tabController;
+  late TabController _tabController;
 
   int _userCoins = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 1, vsync: this);
+    // Change length to 2 for two tabs
+    _tabController = TabController(length: 2, vsync: this);
     _shopDataFuture = _loadShopData();
   }
 
   @override
   void dispose() {
-    _tabController?.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
+  // This method now primarily serves the Background Shop tab.
+  // The Gacha tab will manage its own state.
   Future<Map<String, dynamic>> _loadShopData() async {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('userId');
@@ -53,7 +58,6 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     };
   }
 
-  // Renamed to reflect its new role
   Future<void> _executePurchase(ShopItem item) async {
     if (_userId == null) return;
 
@@ -66,13 +70,18 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
 
     try {
       await _supabaseService.purchaseBackground(userId: _userId!, backgroundId: item.id, cost: item.cost);
+      
+      // Manually update coin count after purchase
+      setState(() {
+        _userCoins -= item.cost;
+        // Refresh background shop data
+        _shopDataFuture = _loadShopData();
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('${item.name}を購入しました！')),
       );
-      // Refresh shop data
-      setState(() {
-        _shopDataFuture = _loadShopData();
-      });
+
     } on Exception catch (e) {
       final message = e.toString();
       String displayMessage = '購入に失敗しました。';
@@ -85,7 +94,6 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     }
   }
 
-  // New method to show confirmation dialog
   Future<void> _showConfirmationDialog(ShopItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -116,6 +124,15 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         title: const Text('ショップ'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'ガチャ履歴',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const GachaHistoryScreen()),
+              );
+            },
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: Chip(
@@ -128,85 +145,94 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
           controller: _tabController,
           tabs: const [
             Tab(text: '背景色'),
+            Tab(text: 'ガチャ'), // Add Gacha tab
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          FutureBuilder<Map<String, dynamic>>(
-            future: _shopDataFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (snapshot.hasError) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text('エラー: ${snapshot.error.toString().replaceFirst('Exception: ', '')}', textAlign: TextAlign.center),
-                  )
-                );
-              }
-
-              final unlockedIds = snapshot.data?['unlocked'] as List<String>? ?? [];
-
-              return GridView.builder(
-                padding: const EdgeInsets.all(16.0),
-                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                  maxCrossAxisExtent: 200, // Each item can be max 200px wide
-                  childAspectRatio: 3 / 4,   // Aspect ratio of each item
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: backgroundShopCatalog.length,
-                itemBuilder: (context, index) {
-                  final item = backgroundShopCatalog[index];
-                  final isUnlocked = unlockedIds.contains(item.id);
-
-                  return Card(
-                    elevation: 2.0,
-                    clipBehavior: Clip.antiAlias,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: Container(color: item.previewColor),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Text(item.name, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
-                                Text('${item.cost} C', style: Theme.of(context).textTheme.bodySmall),
-                              ],
-                            ),
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
-                          child: isUnlocked
-                              ? const Chip(label: Text('購入済み'), avatar: Icon(Icons.check, color: Colors.green), visualDensity: VisualDensity.compact)
-                              : ElevatedButton(
-                                  onPressed: () => _showConfirmationDialog(item), // Updated this line
-                                  child: const Text('購入'),
-                                  style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
-                                ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+          // Tab 1: Background Shop
+          _buildBackgroundShop(),
+          // Tab 2: Gacha
+          const GachaScreen(),
         ],
       ),
+    );
+  }
+
+  // Extracted the background shop UI into its own method for clarity
+  Widget _buildBackgroundShop() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _shopDataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('エラー: ${snapshot.error.toString().replaceFirst('Exception: ', '')}', textAlign: TextAlign.center),
+            )
+          );
+        }
+
+        final unlockedIds = snapshot.data?['unlocked'] as List<String>? ?? [];
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16.0),
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 200,
+            childAspectRatio: 3 / 4,
+            crossAxisSpacing: 16,
+            mainAxisSpacing: 16,
+          ),
+          itemCount: backgroundShopCatalog.length,
+          itemBuilder: (context, index) {
+            final item = backgroundShopCatalog[index];
+            final isUnlocked = unlockedIds.contains(item.id);
+
+            return Card(
+              elevation: 2.0,
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: Container(color: item.previewColor),
+                  ),
+                  Expanded(
+                    flex: 2,
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(item.name, style: Theme.of(context).textTheme.titleMedium, textAlign: TextAlign.center),
+                          Text('${item.cost} C', style: Theme.of(context).textTheme.bodySmall),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+                    child: isUnlocked
+                        ? const Chip(label: Text('購入済み'), avatar: Icon(Icons.check, color: Colors.green), visualDensity: VisualDensity.compact)
+                        : ElevatedButton(
+                            onPressed: () => _showConfirmationDialog(item),
+                            child: const Text('購入'),
+                            style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
+                          ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

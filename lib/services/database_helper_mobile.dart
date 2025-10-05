@@ -1,7 +1,16 @@
-import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
 import '../models/sleep_record.dart';
 import '../utils/date_helper.dart';
+
+// Helper class for Gacha History
+class GachaPullRecord {
+  final String quoteId;
+  final String rarityId;
+  final DateTime pulledAt;
+  GachaPullRecord({required this.quoteId, required this.rarityId, required this.pulledAt});
+}
 
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -19,14 +28,14 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // DBバージョンを2に更新
-    return await openDatabase(path, version: 2, onCreate: _createDB, onUpgrade: _onUpgrade);
+    // DBバージョンを4に更新
+    return await openDatabase(path, version: 4, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
+    // sleep_records table
     const textType = 'TEXT NOT NULL';
     const intType = 'INTEGER NOT NULL';
-
     await db.execute('''
 CREATE TABLE sleep_records ( 
   dataId TEXT PRIMARY KEY, 
@@ -42,18 +51,55 @@ CREATE TABLE sleep_records (
   didNotOversleep $intType
   )
 ''');
+
+    // unlocked_quotes table
+    await db.execute('''
+CREATE TABLE unlocked_quotes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_id TEXT NOT NULL UNIQUE,
+  unlocked_at TEXT NOT NULL
+)
+''');
+
+    // gacha_pull_history table
+    await db.execute('''
+CREATE TABLE gacha_pull_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_id TEXT NOT NULL,
+  rarity_id TEXT NOT NULL,
+  pulled_at TEXT NOT NULL
+)
+''');
   }
 
-  // スキーママイグレーションのロジック
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // Phase 4のデータ移行で扱うため、ここではスキーマ変更のみ
-      // 既存のテーブルをリネームして退避
       await db.execute('ALTER TABLE sleep_records RENAME TO sleep_records_v1');
-      // 新しいテーブルを作成
       await _createDB(db, newVersion);
+      return; // createDB handles all tables, so we can return here.
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+CREATE TABLE unlocked_quotes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_id TEXT NOT NULL UNIQUE,
+  unlocked_at TEXT NOT NULL
+)
+''');
+    }
+    if (oldVersion < 4) {
+      await db.execute('''
+CREATE TABLE gacha_pull_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  quote_id TEXT NOT NULL,
+  rarity_id TEXT NOT NULL,
+  pulled_at TEXT NOT NULL
+)
+''');
     }
   }
+
+  // --- SleepRecord Methods ---
 
   Future<SleepRecord> create(SleepRecord record) async {
     final db = await instance.database;
@@ -138,7 +184,7 @@ CREATE TABLE sleep_records (
     final result = await db.query(
       'sleep_records',
       where: 'recordDate = ?',
-      whereArgs: [targetLogicalDate.toIso8601String().substring(0, 10)], // yyyy-MM-dd形式で比較
+      whereArgs: [targetLogicalDate.toIso8601String().substring(0, 10)],
       limit: 1,
     );
 
@@ -147,6 +193,45 @@ CREATE TABLE sleep_records (
     } else {
       return null;
     }
+  }
+
+  // --- Gacha Quote Methods ---
+
+  Future<void> addUnlockedQuote(String quoteId) async {
+    final db = await instance.database;
+    await db.insert(
+      'unlocked_quotes',
+      {
+        'quote_id': quoteId,
+        'unlocked_at': DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.ignore, // Ignore if quote already exists
+    );
+  }
+
+  Future<List<String>> getUnlockedQuoteIds() async {
+    final db = await instance.database;
+    final result = await db.query('unlocked_quotes', columns: ['quote_id'], orderBy: 'unlocked_at DESC');
+    return result.map((row) => row['quote_id'] as String).toList();
+  }
+
+  Future<void> addGachaPull(String quoteId, String rarityId) async {
+    final db = await instance.database;
+    await db.insert('gacha_pull_history', {
+      'quote_id': quoteId,
+      'rarity_id': rarityId,
+      'pulled_at': DateTime.now().toIso8601String(),
+    });
+  }
+
+  Future<List<GachaPullRecord>> getGachaHistory() async {
+    final db = await instance.database;
+    final result = await db.query('gacha_pull_history', orderBy: 'pulled_at DESC');
+    return result.map((row) => GachaPullRecord(
+      quoteId: row['quote_id'] as String,
+      rarityId: row['rarity_id'] as String,
+      pulledAt: DateTime.parse(row['pulled_at'] as String),
+    )).toList();
   }
 
   Future close() async {
