@@ -133,6 +133,15 @@ class DatabaseHelper {
     return record;
   }
 
+  Future<SleepRecord?> readRecord(String dataId) async {
+    await _ensureInitialized();
+    try {
+      return _inMemoryDb.firstWhere((record) => record.dataId == dataId);
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<List<SleepRecord>> readAllRecords() async {
     await _ensureInitialized();
     final sortedList = List<SleepRecord>.from(_inMemoryDb);
@@ -164,6 +173,30 @@ class DatabaseHelper {
       return 1;
     }
     return 0;
+  }
+
+  Future<int> deleteAllRecords() async {
+    await _ensureInitialized();
+    final count = _inMemoryDb.length;
+    _inMemoryDb.clear();
+    await _persistSleepRecords();
+    return count;
+  }
+
+  Future<SleepRecord?> getLatestRecord() async {
+    await _ensureInitialized();
+    if (_inMemoryDb.isEmpty) return null;
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
+    return sortedList.first;
+  }
+
+  Future<List<SleepRecord>> getLatestRecords({int limit = 3}) async {
+    await _ensureInitialized();
+    if (_inMemoryDb.isEmpty) return [];
+    final sortedList = List<SleepRecord>.from(_inMemoryDb);
+    sortedList.sort((a, b) => b.wakeUpTime.compareTo(a.wakeUpTime));
+    return sortedList.take(limit).toList();
   }
 
   Future<SleepRecord?> getRecordForDate(DateTime date) async {
