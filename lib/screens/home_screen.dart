@@ -65,34 +65,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _updateTopArea() async {
     try {
+      // 1. Load the default quote (Kant, etc.)
       final String jsonString = await rootBundle.loadString('assets/data/quotes.json');
       final List<dynamic> quotesList = jsonDecode(jsonString);
       final now = DateTime.now();
       final effectiveDate = now.hour < 4 ? now.subtract(const Duration(days: 1)) : now;
       final dayOfYear = effectiveDate.difference(DateTime(effectiveDate.year, 1, 1)).inDays;
+
       if (quotesList.isNotEmpty) {
         final quoteIndex = dayOfYear % quotesList.length;
         final quoteData = quotesList[quoteIndex] as Map<String, dynamic>;
         _dailyQuote = quoteData['quote'] as String? ?? '';
         _dailyQuoteAuthor = quoteData['author'] as String? ?? '';
+      } else {
+        // Fallback if quotes.json is empty
+        _dailyQuote = '今日を素晴らしい一日に。';
+        _dailyQuoteAuthor = 'Zzzone';
       }
+
+      // 2. Check for conditions to show a special Zzzone comment
+      final prefs = await SharedPreferences.getInstance();
+      final dateString = '${effectiveDate.year}-${effectiveDate.month.toString().padLeft(2, '0')}-${effectiveDate.day.toString().padLeft(2, '0')}';
+      final zzzoneCommentShownKey = 'zzzone_comment_shown_$dateString';
+      final hasShownZzzoneComment = prefs.getBool(zzzoneCommentShownKey) ?? false;
+
       final recentRecords = await DatabaseHelper.instance.getLatestRecords(limit: 3);
-      if (recentRecords.length == 3) {
+      if (recentRecords.length == 3 && !hasShownZzzoneComment) {
         final averageScore = recentRecords.map((r) => r.score).reduce((a, b) => a + b) / 3;
-        if (dayOfYear % 3 == 0 || averageScore <= 4 || averageScore >= 8) {
-          if (averageScore <= 4) {
-            _dailyQuote = '最近、スコアが低い日が続いていますね。今夜は少し早めに休んでみてはいかがでしょうか？';
-            _dailyQuoteAuthor = 'Zzzone';
-          } else if (averageScore >= 8) {
-            _dailyQuote = '素晴らしい！スコアが高い日が続いています。その調子で良い睡眠を続けましょう！';
-            _dailyQuoteAuthor = 'Zzzone';
-          }
+        
+        String? zzzoneQuote;
+        if (averageScore <= 4) {
+          zzzoneQuote = '最近、スコアが低い日が続いていますね。今夜は少し早めに休んでみてはいかがでしょうか？';
+        } else if (averageScore >= 8) {
+          zzzoneQuote = '素晴らしい！スコアが高い日が続いています。その調子で良い睡眠を続けましょう！';
+        }
+
+        if (zzzoneQuote != null) {
+          _dailyQuote = zzzoneQuote;
+          _dailyQuoteAuthor = 'Zzzone';
+          // Mark as shown for today
+          await prefs.setBool(zzzoneCommentShownKey, true);
         }
       }
     } catch (e) {
+      // In case of any error, show a generic fallback
       _dailyQuote = '今日を素晴らしい一日に。';
       _dailyQuoteAuthor = 'Zzzone';
     }
+
     if (mounted) {
       setState(() {});
     }

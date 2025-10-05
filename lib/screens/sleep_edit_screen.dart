@@ -180,9 +180,23 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
       final userId = prefs.getString('userId');
 
       if (isRankingEnabled && userId != null) {
-        // Award coins if conditions are met
-        if (canAwardCoins) {
-          final userProfile = await _supabaseService.getUser(userId);
+        // Ensure user exists on the server before proceeding
+        var userProfile = await _supabaseService.getUser(userId);
+        if (userProfile == null) {
+          final username = prefs.getString('userName') ?? '';
+          await _supabaseService.updateUser(id: userId, username: username);
+          // Re-fetch profile to get default values (like sleep_coins: 0)
+          userProfile = await _supabaseService.getUser(userId);
+        }
+
+        final today = getLogicalDate(DateTime.now());
+
+        // Award coins if it is the first record of today
+        final recordDateString = DateFormat('yyyy-MM-dd').format(_recordDate);
+        final coinAwardedKey = 'coins_awarded_for_$recordDateString';
+        final alreadyAwarded = prefs.getBool(coinAwardedKey) ?? false;
+
+        if (_mode != EditMode.edit && !alreadyAwarded && recordToSave.recordDate == today) {
           final currentCoins = userProfile?['sleep_coins'] ?? 0;
           final earnedCoins = (duration.inMinutes > 480) ? 480 : duration.inMinutes;
 
@@ -190,8 +204,6 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
             final newTotalCoins = currentCoins + earnedCoins;
             final username = prefs.getString('userName') ?? '';
             await _supabaseService.updateUser(id: userId, username: username, sleepCoins: newTotalCoins);
-            
-            // Mark coins as awarded for this day
             await prefs.setBool(coinAwardedKey, true);
 
             if (mounted) {
