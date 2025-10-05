@@ -104,31 +104,53 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
     setState(() => _isSaving = true);
 
     try {
-      // --- Validation ---
-      if (_wakeUpTime.isBefore(_sleepTime)) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('起床時刻は就寝時刻より後にしてください。')));
+      // --- Correct sleep/wake times and validate ---
+      final correctedSleepTime = DateTime(_recordDate.year, _recordDate.month, _recordDate.day, _sleepTime.hour, _sleepTime.minute);
+      var correctedWakeUpTime = DateTime(_recordDate.year, _recordDate.month, _recordDate.day, _wakeUpTime.hour, _wakeUpTime.minute);
+
+      if (correctedWakeUpTime.isBefore(correctedSleepTime)) {
+        correctedWakeUpTime = correctedWakeUpTime.add(const Duration(days: 1));
+      }
+
+      final duration = correctedWakeUpTime.difference(correctedSleepTime);
+      if (duration.inMinutes <= 0) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('睡眠時間が0分です。時刻を正しく設定してください。')));
         setState(() => _isSaving = false);
         return;
       }
 
       final prefs = await SharedPreferences.getInstance();
+
+      // --- Pre-check for coin award using SharedPreferences ---
+      bool canAwardCoins = false;
+      final today = getLogicalDate(DateTime.now());
+      final recordDateString = DateFormat('yyyy-MM-dd').format(_recordDate);
+      final coinAwardedKey = 'coins_awarded_for_$recordDateString';
+
+      if (_mode != EditMode.edit && _recordDate == today) {
+        final alreadyAwarded = prefs.getBool(coinAwardedKey) ?? false;
+        if (!alreadyAwarded) {
+          canAwardCoins = true;
+        }
+      }
+
       final goalHour = prefs.getInt('goalHour') ?? 23;
       final goalMinute = prefs.getInt('goalMinute') ?? 0;
-      final logicalSleepDate = getLogicalDate(_sleepTime);
+      final logicalSleepDate = getLogicalDate(correctedSleepTime);
       var targetDateTime = DateTime(logicalSleepDate.year, logicalSleepDate.month, logicalSleepDate.day, goalHour, goalMinute);
       if (goalHour < 4) {
         targetDateTime = targetDateTime.add(const Duration(days: 1));
       }
       final startTime = targetDateTime.subtract(const Duration(minutes: 90));
       final endTime = targetDateTime.add(const Duration(minutes: 30));
-      final hasAchievedGoal = !_sleepTime.isBefore(startTime) && !_sleepTime.isAfter(endTime);
+      final hasAchievedGoal = !correctedSleepTime.isBefore(startTime) && !correctedSleepTime.isAfter(endTime);
 
       late SleepRecord recordToSave;
 
       if (_mode == EditMode.edit) {
         recordToSave = widget.existingRecord!.copyWith(
-          sleepTime: _sleepTime,
-          wakeUpTime: _wakeUpTime,
+          sleepTime: correctedSleepTime,
+          wakeUpTime: correctedWakeUpTime,
           score: _score.round(),
           performance: _performance,
           hadDaytimeDrowsiness: _hadDaytimeDrowsiness,
@@ -141,8 +163,8 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
         recordToSave = SleepRecord(
           dataId: const Uuid().v4(),
           recordDate: _recordDate,
-          sleepTime: _sleepTime,
-          wakeUpTime: _wakeUpTime,
+          sleepTime: correctedSleepTime,
+          wakeUpTime: correctedWakeUpTime,
           score: _score.round(),
           performance: _performance,
           hadDaytimeDrowsiness: _hadDaytimeDrowsiness,
@@ -153,21 +175,42 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
         await DatabaseHelper.instance.create(recordToSave);
       }
 
+      // --- Server-side actions ---
       final isRankingEnabled = prefs.getBool('isRankingEnabled') ?? false;
       final userId = prefs.getString('userId');
-      final today = getLogicalDate(DateTime.now());
 
-      if (isRankingEnabled && userId != null && recordToSave.recordDate == today) {
-        // Ensure user exists on the server before submitting a record
-        final username = prefs.getString('userName') ?? '';
-        await _supabaseService.updateUser(id: userId, username: username);
+      if (isRankingEnabled && userId != null) {
+        // Award coins if conditions are met
+        if (canAwardCoins) {
+          final userProfile = await _supabaseService.getUser(userId);
+          final currentCoins = userProfile?['sleep_coins'] ?? 0;
+          final earnedCoins = (duration.inMinutes > 480) ? 480 : duration.inMinutes;
 
-        await _supabaseService.submitRecord(
-          userId: userId,
-          dataId: recordToSave.dataId,
-          sleepDuration: recordToSave.duration.inMinutes,
-          date: DateFormat('yyyy-MM-dd').format(recordToSave.recordDate),
-        );
+          if (earnedCoins > 0) {
+            final newTotalCoins = currentCoins + earnedCoins;
+            final username = prefs.getString('userName') ?? '';
+            await _supabaseService.updateUser(id: userId, username: username, sleepCoins: newTotalCoins);
+            
+            // Mark coins as awarded for this day
+            await prefs.setBool(coinAwardedKey, true);
+
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('$earnedCoins C を獲得しました！')),
+              );
+            }
+          }
+        }
+
+        // Submit record to ranking if it's for today
+        if (recordToSave.recordDate == today) {
+          await _supabaseService.submitRecord(
+            userId: userId,
+            dataId: recordToSave.dataId,
+            sleepDuration: recordToSave.duration.inMinutes,
+            date: DateFormat('yyyy-MM-dd').format(recordToSave.recordDate),
+          );
+        }
       }
 
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('記録を保存しました')));
@@ -236,7 +279,16 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
   @override
   Widget build(BuildContext context) {
     final isManualOrEdit = _mode == EditMode.manual || _mode == EditMode.edit;
-    final duration = _wakeUpTime.difference(_sleepTime);
+    // --- Correctly calculate duration for display, handling overnight cases ---
+    // Base the time on the selected recordDate to fix cross-day calculation bugs.
+    final displaySleepTime = DateTime(_recordDate.year, _recordDate.month, _recordDate.day, _sleepTime.hour, _sleepTime.minute);
+    var displayWakeUpTime = DateTime(_recordDate.year, _recordDate.month, _recordDate.day, _wakeUpTime.hour, _wakeUpTime.minute);
+
+    // Automatically adjust for overnight sleep.
+    if (displayWakeUpTime.isBefore(displaySleepTime)) {
+      displayWakeUpTime = displayWakeUpTime.add(const Duration(days: 1));
+    }
+    final duration = displayWakeUpTime.difference(displaySleepTime);
 
     return Scaffold(
       appBar: AppBar(

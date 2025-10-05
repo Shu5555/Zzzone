@@ -108,7 +108,13 @@ class DatabaseHelper {
   Future<List<SleepRecord>> readAllRecords() async {
     await _ensureInitialized();
     final sortedList = List<SleepRecord>.from(_inMemoryDb);
-    sortedList.sort((a, b) => b.sleepTime.compareTo(a.sleepTime));
+    sortedList.sort((a, b) {
+      int dateCompare = b.recordDate.compareTo(a.recordDate);
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      return b.wakeUpTime.compareTo(a.wakeUpTime);
+    });
     return sortedList;
   }
 

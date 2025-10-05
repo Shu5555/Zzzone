@@ -78,7 +78,7 @@ CREATE TABLE sleep_records (
 
   Future<List<SleepRecord>> readAllRecords() async {
     final db = await instance.database;
-    final orderBy = 'sleepTime DESC';
+    final orderBy = 'recordDate DESC, wakeUpTime DESC';
     final result = await db.query('sleep_records', orderBy: orderBy);
     return result.map((json) => SleepRecord.fromMap(json)).toList();
   }

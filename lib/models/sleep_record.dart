@@ -59,7 +59,7 @@ class SleepRecord {
   Map<String, dynamic> toMap() {
     return {
       'dataId': dataId,
-      'recordDate': recordDate.toIso8601String(),
+      'recordDate': recordDate.toIso8601String().substring(0, 10),
       'spec_version': spec_version,
       'sleepTime': sleepTime.toIso8601String(),
       'wakeUpTime': wakeUpTime.toIso8601String(),
