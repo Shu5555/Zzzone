@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/shop_item.dart';
 import '../services/supabase_ranking_service.dart';
+import 'gift_code_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -182,6 +183,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       leading: const Icon(Icons.monetization_on_outlined),
                       title: const Text('所持スリープコイン'),
                       trailing: Text('$_sleepCoins C', style: Theme.of(context).textTheme.titleMedium),
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: const Icon(Icons.card_giftcard_outlined),
+                      title: const Text('ギフトコード'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const GiftCodeScreen()),
+                        );
+                      },
                     ),
                     const Divider(),
                     _buildBackgroundSelector(), // Existing Background Selector

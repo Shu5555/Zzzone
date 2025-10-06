@@ -23,7 +23,6 @@ Future<void> _runDataMigration() async {
   try {
     final oldTableInfo = await db.rawQuery("SELECT name FROM sqlite_master WHERE type='table' AND name='sleep_records_v1'");
     if (oldTableInfo.isEmpty) {
-      // Old table doesn't exist, no migration needed.
       await prefs.setBool('is_v2_migrated', true);
       return;
     }
@@ -38,13 +37,12 @@ Future<void> _runDataMigration() async {
       final sleepTimeUTC = DateTime.parse(oldMap['sleepTime']);
       final wakeUpTimeUTC = DateTime.parse(oldMap['wakeUpTime']);
 
-      // The old data was stored in UTC. Convert to local time for JST-based logic.
       final sleepTimeLocal = sleepTimeUTC.toLocal();
       final wakeUpTimeLocal = wakeUpTimeUTC.toLocal();
 
       final newRecord = SleepRecord(
         dataId: const Uuid().v4(),
-        recordDate: getLogicalDate(wakeUpTimeLocal), // Determine recordDate from local wake-up time
+        recordDate: getLogicalDate(wakeUpTimeLocal),
         spec_version: 2,
         sleepTime: sleepTimeLocal,
         wakeUpTime: wakeUpTimeLocal,
@@ -59,15 +57,11 @@ Future<void> _runDataMigration() async {
       await db.insert('sleep_records', newRecord.toMap());
     }
 
-    // Optional: Drop the old table after successful migration
-    // await db.execute('DROP TABLE sleep_records_v1');
-
     await prefs.setBool('is_v2_migrated', true);
     print('Successfully migrated ${oldRecords.length} records to v2 format.');
 
   } catch (e) {
     print('Data migration failed: $e');
-    // Handle migration failure, maybe by clearing the new table to allow a retry next time.
   }
 }
 
@@ -81,7 +75,6 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  // Run data migration only on non-web platforms
   if (!kIsWeb) {
     await _runDataMigration();
   }

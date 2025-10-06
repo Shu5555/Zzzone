@@ -198,7 +198,12 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
 
         if (_mode != EditMode.edit && !alreadyAwarded && recordToSave.recordDate == today) {
           final currentCoins = userProfile?['sleep_coins'] ?? 0;
-          final earnedCoins = (duration.inMinutes > 480) ? 480 : duration.inMinutes;
+          var earnedCoins = (duration.inMinutes > 480) ? 480 : duration.inMinutes;
+
+          // Add bonus coins if the goal is achieved
+          if (hasAchievedGoal) {
+            earnedCoins += 100;
+          }
 
           if (earnedCoins > 0) {
             final newTotalCoins = currentCoins + earnedCoins;
