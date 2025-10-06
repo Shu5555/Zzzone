@@ -16,6 +16,7 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
 - **10連ガチャ:** 1回分お得に、一度に10個の名言を獲得できる10連ガチャも搭載しています。
 - **ガチャ履歴:** これまで引いたガチャの結果をすべて時系列で確認できます。
 - **演出:** ガチャを引く際には、獲得した名言の最高レアリティに応じたアニメーション演出が再生されます。
+- **ガチャポイント:** ガチャを1回引くごとに1ポイントが貯まります。将来的に、ポイントを使って特別なアイテムと交換できるようになる予定です。
 
 ### 3. ホーム画面のカスタマイズ
 - **お気に入り名言:** 「名言一覧」画面から、獲得した名言の中から好きなものを「お気に入り」に設定できます。設定した名言はホーム画面に常に表示されます。
@@ -76,6 +77,8 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
       -- 既存テーブルへの追加
       ALTER TABLE public.users ADD COLUMN sleep_coins INTEGER NOT NULL DEFAULT 0;
       ALTER TABLE public.users ADD COLUMN favorite_quote_id TEXT;
+      ALTER TABLE public.users ADD COLUMN gacha_pull_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE public.users ADD COLUMN gacha_points INTEGER NOT NULL DEFAULT 0;
       ```
     - **`sleep_records`テーブル:**
       ```sql
@@ -116,16 +119,26 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
       ```
     - **`deduct_coins_for_gacha`関数:**
       ```sql
-      CREATE OR REPLACE FUNCTION deduct_coins_for_gacha(p_user_id UUID, p_cost INT)
+      CREATE OR REPLACE FUNCTION deduct_coins_for_gacha(p_user_id UUID, p_cost INT, p_pull_count INT)
       RETURNS void AS $$
       DECLARE
         current_coins INT;
       BEGIN
+        -- 現在のコイン残高を取得
         SELECT sleep_coins INTO current_coins FROM public.users WHERE id = p_user_id;
+
+        -- コインが足りているかチェック
         IF current_coins < p_cost THEN
           RAISE EXCEPTION 'insufficient_funds';
         END IF;
-        UPDATE public.users SET sleep_coins = current_coins - p_cost WHERE id = p_user_id;
+
+        -- コインを消費し、ガチャ回数とポイントを更新
+        UPDATE public.users
+        SET
+          sleep_coins = current_coins - p_cost,
+          gacha_pull_count = gacha_pull_count + p_pull_count,
+          gacha_points = gacha_points + p_pull_count -- 1プル=1ポイントの場合
+        WHERE id = p_user_id;
       END;
       $$ LANGUAGE plpgsql SECURITY DEFINER;
       ```

@@ -128,11 +128,12 @@ class SupabaseRankingService {
 
   // --- Gacha Feature Methods (New Architecture) ---
 
-  /// Deducts coins for a gacha pull.
-  Future<void> deductCoinsForGacha(String userId, int cost) async {
+  /// Deducts coins for a gacha pull and awards gacha points.
+  Future<void> deductCoinsForGacha(String userId, int cost, int pullCount) async {
     await _supabase.rpc('deduct_coins_for_gacha', params: {
       'p_user_id': userId,
       'p_cost': cost,
+      'p_pull_count': pullCount,
     });
   }
 
