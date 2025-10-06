@@ -24,6 +24,7 @@ class _GachaScreenState extends State<GachaScreen> {
 
   String? _userId;
   int _userCoins = 0;
+  int _gachaPoints = 0;
   bool _isPulling = false;
 
   @override
@@ -52,6 +53,7 @@ class _GachaScreenState extends State<GachaScreen> {
     if (mounted) {
       setState(() {
         _userCoins = userProfile?['sleep_coins'] ?? 0;
+        _gachaPoints = userProfile?['gacha_points'] ?? 0;
       });
     }
 
@@ -72,12 +74,13 @@ class _GachaScreenState extends State<GachaScreen> {
 
       final randomItem = _performWeightedSelection(config, allItems);
 
-      await _supabaseService.deductCoinsForGacha(_userId!, config.singlePullCost);
+      await _supabaseService.deductCoinsForGacha(_userId!, config.singlePullCost, 1);
       await DatabaseHelper.instance.addUnlockedQuote(randomItem.id);
       await DatabaseHelper.instance.addGachaPull(randomItem.id, randomItem.rarity.id);
 
       setState(() {
         _userCoins -= config.singlePullCost;
+        _gachaPoints += 1;
       });
 
       Navigator.of(context).push(
@@ -112,7 +115,7 @@ class _GachaScreenState extends State<GachaScreen> {
         pulledItems.add(_performWeightedSelection(config, allItems));
       }
 
-      await _supabaseService.deductCoinsForGacha(_userId!, config.multiPullCost);
+      await _supabaseService.deductCoinsForGacha(_userId!, config.multiPullCost, config.multiPullCount);
 
       for (final item in pulledItems) {
         await DatabaseHelper.instance.addUnlockedQuote(item.id);
@@ -121,6 +124,7 @@ class _GachaScreenState extends State<GachaScreen> {
 
       setState(() {
         _userCoins -= config.multiPullCost;
+        _gachaPoints += config.multiPullCount;
       });
 
       Navigator.of(context).push(
@@ -250,11 +254,22 @@ class _GachaScreenState extends State<GachaScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
-                      const SizedBox(width: 8),
-                      Text('$_userCoins C', style: Theme.of(context).textTheme.titleLarge),
+                      Row(
+                        children: [
+                          const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
+                          const SizedBox(width: 8),
+                          Text('$_userCoins C', style: Theme.of(context).textTheme.titleLarge),
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.star, color: Colors.pinkAccent, size: 24),
+                          const SizedBox(width: 8),
+                          Text('$_gachaPoints P', style: Theme.of(context).textTheme.titleLarge),
+                        ],
+                      ),
                     ],
                   ),
                 ),

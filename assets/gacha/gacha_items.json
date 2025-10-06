@@ -552,9 +552,598 @@
       "text": "わんちんくん万歳！！",
       "author": "seiyun0808"
     }
+    },
+    {
+    "id": "quote_070",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "翼を剥がしながら、自分の存在を証明していく。今はただ、貴方が恋しかった",
+      "author": "seiyun0808"
     }
-    
-
-
+    },
+    {
+      "id": "quote_071",
+      "rarityId": "rare",
+      "customData": {
+        "text": "想像力は知識よりも重要だ。",
+        "author": "アインシュタイン"
+      }
+    },
+    {
+      "id": "quote_072",
+      "rarityId": "common",
+      "customData": {
+        "text": "挫折を経験したことが無い者は、何も新しい事に挑戦したことが無いということだ。",
+        "author": "アインシュタイン"
+      }
+    },
+    {
+      "id": "quote_073",
+      "rarityId": "common",
+      "customData": {
+        "text": "生きるために食べよ、食べるために生きるな。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_074",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "世界を動かそうと思ったら、まず自分自身を動かせ。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_075",
+      "rarityId": "rare",
+      "customData": {
+        "text": "人の心で想像でき、信じられることは、すべて実現できる。",
+        "author": "ナポレオン・ヒル"
+      }
+    },
+    {
+      "id": "quote_076",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "怪物と闘う者は、その過程で自分自身も怪物になることのないように気をつけなくてはならない。深淵をのぞく時、深淵もまたこちらをのぞいているのだ。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_077",
+      "rarityId": "rare",
+      "customData": {
+        "text": "脱皮できない蛇は滅びる。意見を脱皮していくことをさまたげられた精神も同じことである。それは精神であることをやめる。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_078",
+      "rarityId": "rare",
+      "customData": {
+        "text": "事実というものは存在しない。存在するのは解釈だけである。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_079",
+      "rarityId": "common",
+      "customData": {
+        "text": "苦しみをともにするのではなく、喜びをともにすることが友人をつくる。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_080",
+      "rarityId": "rare",
+      "customData": {
+        "text": "臆病者は本当に死ぬまでに幾度も死ぬが、勇者は一度しか死を経験しない。",
+        "author": "シェイクスピア"
+      }
+    },
+    {
+      "id": "quote_081",
+      "rarityId": "common",
+      "customData": {
+        "text": "この世は一つの舞台、すべての人は役者にすぎない。",
+        "author": "シェイクスピア"
+      }
+    },
+    {
+      "id": "quote_082",
+      "rarityId": "rare",
+      "customData": {
+        "text": "経験とは、誰もが自分の過ちにつける名前のことだ。",
+        "author": "オスカー・ワイルド"
+      }
+    },
+    {
+      "id": "quote_083",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "生きるとは、この世でいちばん稀なことだ。たいていの人は、ただ存在しているだけである。",
+        "author": "オスカー・ワイルド"
+      }
+    },
+    {
+      "id": "quote_084",
+      "rarityId": "rare",
+      "customData": {
+        "text": "人生で必要なものは無知と自信だけだ。これだけで成功は間違いない。",
+        "author": "マーク・トウェイン"
+      }
+    },
+    {
+      "id": "quote_085",
+      "rarityId": "rare",
+      "customData": {
+        "text": "人類は一つのとても効果的な武器をもっている。それは笑いだ。",
+        "author": "マーク・トウェイン"
+      }
+    },
+    {
+      "id": "quote_086",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "神は死んだ。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_087",
+      "rarityId": "rare",
+      "customData": {
+        "text": "音楽がなければ人生は過ちだ。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_088",
+      "rarityId": "rare",
+      "customData": {
+        "text": "生きる理由を持つ者は、どんな生き方にも耐えることができる。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_089",
+      "rarityId": "common",
+      "customData": {
+        "text": "自分自身になれ。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_090",
+      "rarityId": "common",
+      "customData": {
+        "text": "目的を忘れることは、愚かな人間にもっともありがちなことだ。",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_091",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "汝は汝自身の炎で自らを焼き尽くす覚悟がなければならない。灰にならずして、どうして新しく生まれ変わることができようか？",
+        "author": "フリードリヒ・ニーチェ"
+      }
+    },
+    {
+      "id": "quote_092",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "ほとんどの人間は実のところ自由など求めていない。なぜなら自由には責任が伴うからである。みんな責任を負うことを恐れているのだ。",
+        "author": "ジークムント・フロイト"
+      }
+    },
+    {
+      "id": "quote_093",
+      "rarityId": "rare",
+      "customData": {
+        "text": "心とは氷山のようなものである。氷山は、その大きさの7分の1を海面の上に出して漂う。",
+        "author": "ジークムント・フロイト"
+      }
+    },
+    {
+      "id": "quote_094",
+      "rarityId": "common",
+      "customData": {
+        "text": "忘れるのは、忘れたいからである。",
+        "author": "ジークムント・フロイト"
+      }
+    },
+    {
+      "id": "quote_095",
+      "rarityId": "rare",
+      "customData": {
+        "text": "力は、あなたの弱さの中から生まれるのです。",
+        "author": "ジークムント・フロイト"
+      }
+    },
+    {
+      "id": "quote_096",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "汝自らを知れ。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_097",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "唯一の真の英知とは、自分が無知であることを知ることにある。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_098",
+      "rarityId": "rare",
+      "customData": {
+        "text": "悪法もまた法なり。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_099",
+      "rarityId": "rare",
+      "customData": {
+        "text": "吟味されざる生は、人間に値しない。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_100",
+      "rarityId": "common",
+      "customData": {
+        "text": "最も尊重せねばならぬのは、生くることにあらず、よく生くることなり。",
+        "author": "ソクラテス"
+      }
+    },
+    {
+      "id": "quote_101",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "万物は数なり。",
+        "author": "ピタゴラス"
+      }
+    },
+    {
+      "id": "quote_102",
+      "rarityId": "rare",
+      "customData": {
+        "text": "自らを制し得ないものは自由たり得ず。",
+        "author": "ピタゴラス"
+      }
+    },
+    {
+      "id": "quote_103",
+      "rarityId": "common",
+      "customData": {
+        "text": "沈黙は、無意味な言葉よりもよいものだ。",
+        "author": "ピタゴラス"
+      }
+    },
+    {
+      "id": "quote_104",
+      "rarityId": "rare",
+      "customData": {
+        "text": "目を閉じて、眠りに就いてはならぬ。その日、お前のした行為を三度振り返るまでは。何がうまくでき、何が失敗し、何をまだしていないか？",
+        "author": "ピタゴラス"
+      }
+    },
+    {
+      "id": "quote_105",
+      "rarityId": "rare",
+      "customData": {
+        "text": "少しを知るために、多くを学んでおかねばならぬ。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_106",
+      "rarityId": "rare",
+      "customData": {
+        "text": "多くの場合、成功は成功するまでの所要時間を知っているか否かにかかっている。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_107",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "一時間の読書をもってしても和らげることのできない悩みの種に、私はお目にかかったことがない。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_108",
+      "rarityId": "common",
+      "customData": {
+        "text": "真に偉大な人間になるためには、人々の上に立つのではなく、彼らと共に立たなければならない。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_109",
+      "rarityId": "common",
+      "customData": {
+        "text": "自由とは、法の許す限りにおいて行動する権利である。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_110",
+      "rarityId": "rare",
+      "customData": {
+        "text": "世の中で成功を収めるには、馬鹿のように見せかけ、利口に行動することである。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_111",
+      "rarityId": "common",
+      "customData": {
+        "text": "法とは、最も広い意味にとれば、事物の本性に由来する必然的な関係である。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_112",
+      "rarityId": "rare",
+      "customData": {
+        "text": "偉大なことを成し遂げる人は、つねに大胆な冒険者である。",
+        "author": "モンテスキュー"
+      }
+    },
+    {
+      "id": "quote_113",
+      "rarityId": "rare",
+      "customData": {
+        "text": "生きるとは呼吸することではない。行動することだ。",
+        "author": "ジャン＝ジャック・ルソー"
+      }
+    },
+    {
+      "id": "quote_114",
+      "rarityId": "common",
+      "customData": {
+        "text": "人は常に幸福を求めるが、常に幸福に気づかない。",
+        "author": "ジャン＝ジャック・ルソー"
+      }
+    },
+    {
+      "id": "quote_115",
+      "rarityId": "rare",
+      "customData": {
+        "text": "私たちは無知によって道に迷うことはない。自分が知っていると信じることによって迷うのだ。",
+        "author": "ジャン＝ジャック・ルソー"
+      }
+    },
+    {
+      "id": "quote_116",
+      "rarityId": "common",
+      "customData": {
+        "text": "子供を不幸にするいちばん確実な方法は、いつでも、なんでも手に入れられるようにしてやることである。",
+        "author": "ジャン＝ジャック・ルソー"
+      }
+    },
+    {
+      "id": "quote_117",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "いかなるものでも、自然という造物主の手から出るときは善である。人間の手に渡って悪となる。",
+        "author": "ジャン＝ジャック・ルソー"
+      }
+    },
+    {
+      "id": "quote_118",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "いかなる人間の知識も、その人の経験を超えるものではない。",
+        "author": "ジョン・ロック"
+      }
+    },
+    {
+      "id": "quote_119",
+      "rarityId": "rare",
+      "customData": {
+        "text": "健全な精神は健全な肉体に宿る",
+        "author": "ジョン・ロック"
+      }
+    },
+    {
+      "id": "quote_120",
+      "rarityId": "rare",
+      "customData": {
+        "text": "法の終わるところ、専制がはじまります。",
+        "author": "ジョン・ロック"
+      }
+    },
+    {
+      "id": "quote_121",
+      "rarityId": "common",
+      "customData": {
+        "text": "あなたを心配させるものが、あなたを支配する。",
+        "author": "ジョン・ロック"
+      }
+    },
+    {
+      "id": "quote_122",
+      "rarityId": "common",
+      "customData": {
+        "text": "大人の議論よりも、子供たちの予期しない質問から教えられるところが多いのです。",
+        "author": "ジョン・ロック"
+      }
+    },
+    {
+      "id": "quote_123",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "天才とは1%のひらめきと99%の努力である。",
+        "author": "トーマス・エジソン"
+      }
+    },
+    {
+      "id": "quote_124",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "私は失敗したことがない。ただ、1万通りの、うまく行かない方法を見つけただけだ。",
+        "author": "トーマス・エジソン"
+      }
+    },
+    {
+      "id": "quote_125",
+      "rarityId": "rare",
+      "customData": {
+        "text": "私たちの最大の弱点は諦めることにある。成功するのに最も確実な方法は、常にもう一回だけ試してみることだ。",
+        "author": "トーマス・エジソン"
+      }
+    },
+    {
+      "id": "quote_126",
+      "rarityId": "rare",
+      "customData": {
+        "text": "人生の失敗者の多くは、成功にどれほど近づいていたかを知らずに諦めてしまった人々である。",
+        "author": "トーマス・エジソン"
+      }
+    },
+    {
+      "id": "quote_127",
+      "rarityId": "common",
+      "customData": {
+        "text": "もっと良い方法がある。それを見つけよ。",
+        "author": "トーマス・エジソン"
+      }
+    },
+    {
+      "id": "quote_128",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "それでも地球は動く。",
+        "author": "ガリレオ・ガリレイ"
+      }
+    },
+    {
+      "id": "quote_129",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "人にものを教えることはできない。みずから気づく手助けができるだけだ。",
+        "author": "ガリレオ・ガリレイ"
+      }
+    },
+    {
+      "id": "quote_130",
+      "rarityId": "rare",
+      "customData": {
+        "text": "哲学はわれわれの目の前にひろげられているこの巨大な書物、つまり宇宙に書かれている。",
+        "author": "ガリレオ・ガリレイ"
+      }
+    },
+    {
+      "id": "quote_131",
+      "rarityId": "rare",
+      "customData": {
+        "text": "懐疑は発明の父である。",
+        "author": "ガリレオ・ガリレイ"
+      }
+    },
+    {
+      "id": "quote_132",
+      "rarityId": "common",
+      "customData": {
+        "text": "見えないと始まらない。見ようとしないと始まらない。",
+        "author": "ガリレオ・ガリレイ"
+      }
+    },
+    {
+      "id": "quote_133",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "自分が何を知っているのかを知り、自分が何を知らないのかを知っていないということを知ること。それが真の知識である。",
+        "author": "ニコラウス・コペルニクス"
+      }
+    },
+    {
+      "id": "quote_134",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "己の欲せざるところ、人に施すこと勿れ。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_135",
+      "rarityId": "rare",
+      "customData": {
+        "text": "三人行けば、必ず我が師あり。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_136",
+      "rarityId": "rare",
+      "customData": {
+        "text": "人遠き慮りなければ、必ず近き憂いあり。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_137",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "これを知るをこれを知ると為し、知らざるを知らずと為す、是知るなり。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_138",
+      "rarityId": "common",
+      "customData": {
+        "text": "過ちて改めざる、これを過ちという。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_139",
+      "rarityId": "common",
+      "customData": {
+        "text": "学びて時にこれを習う、また説ばしからずや。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_140",
+      "rarityId": "rare",
+      "customData": {
+        "text": "故きを温ねて新しきを知る、以て師と為るべし。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_141",
+      "rarityId": "common",
+      "customData": {
+        "text": "君子は坦かに蕩蕩たり、小人は長えに戚戚たり。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_142",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "朝に道を聞かば、夕に死すとも可なり。",
+        "author": "孔子"
+      }
+    },
+    {
+      "id": "quote_143",
+      "rarityId": "rare",
+      "customData": {
+        "text": "教え有りて類無し。",
+        "author": "孔子"
+      }
+    }
   ]
 }
