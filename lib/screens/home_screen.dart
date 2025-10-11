@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/date_helper.dart'; // New import
 
 import '../gacha/models/gacha_item.dart';
 import '../gacha/services/gacha_data_loader.dart';
@@ -223,6 +224,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isTodaySaturday = isSaturday(DateTime.now()); // Check if today is Saturday
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Zzzone'),
@@ -259,6 +262,15 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (isTodaySaturday) // Conditionally display "S"
+              const Text(
+                'S',
+                style: TextStyle(
+                  fontSize: 80, // Large size
+                  fontWeight: FontWeight.bold,
+                  color: Colors.yellow, // Yellow color
+                ),
+              ),
             if (_isSleeping)
               Text(
                 _formatDuration(_elapsed),

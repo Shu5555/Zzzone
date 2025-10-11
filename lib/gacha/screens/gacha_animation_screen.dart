@@ -5,10 +5,12 @@ import 'gacha_result_screen.dart';
 
 class GachaAnimationScreen extends StatefulWidget {
   final GachaItem item;
+  final bool isNew;
 
   const GachaAnimationScreen({
     super.key,
     required this.item,
+    this.isNew = false,
   });
 
   @override
@@ -36,6 +38,7 @@ class _GachaAnimationScreenState extends State<GachaAnimationScreen>
           MaterialPageRoute(
             builder: (context) => GachaResultScreen(
               item: widget.item,
+              isNew: widget.isNew,
             ),
           ),
         );

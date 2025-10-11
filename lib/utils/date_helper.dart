@@ -19,3 +19,8 @@ String getLogicalDateString(DateTime dateTime) {
   final logicalDate = getLogicalDate(dateTime);
   return DateFormat('yyyy-MM-dd').format(logicalDate);
 }
+
+/// 指定された日付が土曜日であるかを判定します。
+bool isSaturday(DateTime date) {
+  return date.weekday == DateTime.saturday;
+}

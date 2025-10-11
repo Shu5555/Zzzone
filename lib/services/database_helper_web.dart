@@ -212,12 +212,14 @@ class DatabaseHelper {
 
   // --- Gacha Quote Methods ---
 
-  Future<void> addUnlockedQuote(String quoteId) async {
+  Future<bool> addUnlockedQuote(String quoteId) async {
     await _ensureInitialized();
     if (!_unlockedQuotes.contains(quoteId)) {
       _unlockedQuotes.add(quoteId);
       await _persistUnlockedQuotes();
+      return true; // Newly added
     }
+    return false; // Already existed
   }
 
   Future<List<String>> getUnlockedQuoteIds() async {

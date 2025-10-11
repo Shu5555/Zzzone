@@ -3,10 +3,12 @@ import '../models/gacha_item.dart';
 
 class GachaResultScreen extends StatelessWidget {
   final GachaItem item;
+  final bool isNew; // Add this line
 
   const GachaResultScreen({
     super.key,
     required this.item,
+    this.isNew = false, // Add this line, default to false
   });
 
   @override
@@ -19,9 +21,32 @@ class GachaResultScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Text(
-              '獲得！',
-              style: TextStyle(fontSize: 24, color: Colors.white),
+            Row( // Wrap "獲得！" and "NEW!" in a Row
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  '獲得！',
+                  style: TextStyle(fontSize: 24, color: Colors.white),
+                ),
+                if (isNew) ...[ // Conditionally display "NEW!"
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.redAccent,
+                      borderRadius: BorderRadius.circular(5),
+                    ),
+                    child: const Text(
+                      'NEW!',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
             ),
             const SizedBox(height: 20),
             Card(

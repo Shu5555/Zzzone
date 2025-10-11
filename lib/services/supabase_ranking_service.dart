@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'dart:math';
+import '../utils/date_helper.dart'; // New import
 
 class SupabaseRankingService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -41,7 +42,7 @@ class SupabaseRankingService {
     try {
       final response = await _supabase
           .from('users')
-          .select('*, favorite_quote_id') // Ensure favorite_quote_id is fetched
+          .select('*, favorite_quote_id, ultra_rare_tickets') // Add ultra_rare_tickets
           .eq('id', userId)
           .single();
       return response;
@@ -137,8 +138,32 @@ class SupabaseRankingService {
     });
   }
 
+  /// Purchases a gacha ticket using gacha points.
+  Future<void> purchaseGachaTicket({required String userId, required int cost, required String ticketType}) async {
+    await _supabase.rpc('purchase_gacha_ticket', params: {
+      'p_user_id': userId,
+      'p_cost': cost,
+      'p_ticket_type': ticketType, // Currently unused in SQL, but good for future expansion
+    });
+  }
+
+  /// Consumes an ultra rare gacha ticket.
+  Future<void> consumeUltraRareTicket(String userId) async {
+    await _supabase.rpc('consume_ultra_rare_ticket', params: {
+      'p_user_id': userId,
+    });
+  }
+
   /// Sets the user's favorite quote to be displayed on the home screen.
   Future<void> setFavoriteQuote(String userId, String? quoteId) async {
     await _supabase.from('users').update({'favorite_quote_id': quoteId}).eq('id', userId);
+  }
+
+  /// Updates the user's sleep coins by adding a specified amount.
+  Future<void> updateSleepCoins({required String userId, required int coinsToAdd}) async {
+    await _supabase.rpc('update_sleep_coins', params: {
+      'p_user_id': userId,
+      'p_coins_to_add': coinsToAdd,
+    });
   }
 }

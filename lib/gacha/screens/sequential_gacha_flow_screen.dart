@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import '../models/gacha_config.dart';
 import '../models/gacha_item.dart';
 import 'multi_gacha_result_screen.dart';
+import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
 class SequentialGachaFlowScreen extends StatefulWidget {
-  final List<GachaItem> items;
+  final List<GachaItemWithNewStatus> itemsWithStatus; // Change this line
   final GachaConfig config;
 
   const SequentialGachaFlowScreen({
     super.key,
-    required this.items,
+    required this.itemsWithStatus, // Change this line
     required this.config,
   });
 
@@ -21,7 +22,7 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
   int _currentIndex = 0;
 
   void _onTapScreen() {
-    if (_currentIndex < widget.items.length - 1) {
+    if (_currentIndex < widget.itemsWithStatus.length - 1) { // Use itemsWithStatus
       setState(() {
         _currentIndex++;
       });
@@ -35,7 +36,7 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => MultiGachaResultScreen(
-          items: widget.items,
+          itemsWithStatus: widget.itemsWithStatus, // Pass itemsWithStatus
           config: widget.config,
         ),
       ),
@@ -44,25 +45,27 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final item = widget.items[_currentIndex];
+    final itemWithStatus = widget.itemsWithStatus[_currentIndex]; // Get GachaItemWithNewStatus
+    final item = itemWithStatus.item; // Get the GachaItem
     final rarity = item.rarity;
+    final bool isNew = itemWithStatus.isNew; // Get the isNew status
 
-    return GestureDetector(
-      onTap: _onTapScreen,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          automaticallyImplyLeading: false,
-          actions: [
-            TextButton(
-              onPressed: _navigateToSummary,
-              child: const Text('結果一覧へスキップ'),
-            ),
-          ],
-        ),
-        body: Center(
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          TextButton(
+            onPressed: _navigateToSummary,
+            child: const Text('結果一覧へスキップ'),
+          ),
+        ],
+      ),
+      body: Center( // Reverted to Center directly
+        child: GestureDetector( // Wrap AnimatedSwitcher with GestureDetector
+          onTap: _onTapScreen, // Moved onTap here
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 300),
             transitionBuilder: (Widget child, Animation<double> animation) {
@@ -72,8 +75,8 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
               key: ValueKey<int>(_currentIndex),
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '${_currentIndex + 1} / ${widget.items.length}',
+                Text( // This is the counter, keep it separate
+                  '${_currentIndex + 1} / ${widget.itemsWithStatus.length}',
                   style: const TextStyle(fontSize: 18, color: Colors.white70),
                 ),
                 const SizedBox(height: 20),
@@ -88,17 +91,40 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
                     padding: const EdgeInsets.all(24.0),
                     child: Column(
                       children: [
-                        Text(
-                          rarity.name,
-                          style: TextStyle(
-                            fontSize: 20,
-                            color: rarity.color,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 2,
-                          ),
+                        Row( // Wrap rarity name and NEW! badge
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              rarity.name,
+                              style: TextStyle(
+                                fontSize: 20,
+                                color: rarity.color,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 2,
+                              ),
+                            ),
+                            if (isNew) ...[ // Conditionally display "NEW!"
+                              const SizedBox(width: 10),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.redAccent,
+                                  borderRadius: BorderRadius.circular(5),
+                                ),
+                                child: const Text(
+                                  'NEW!',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         const SizedBox(height: 16),
-                        Text(
+                        Text( // Reverted to just Text
                           '"${item.text}"',
                           textAlign: TextAlign.center,
                           style: const TextStyle(
@@ -123,13 +149,13 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
             ),
           ),
         ),
-        bottomNavigationBar: const Padding(
-          padding: EdgeInsets.all(20.0),
-          child: Text(
-            'タップして次へ',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
+      ),
+      bottomNavigationBar: const Padding(
+        padding: EdgeInsets.all(20.0),
+        child: Text(
+          'タップして次へ',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white, fontSize: 16),
         ),
       ),
     );

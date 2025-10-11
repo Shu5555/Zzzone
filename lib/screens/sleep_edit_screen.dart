@@ -197,7 +197,7 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
         final alreadyAwarded = prefs.getBool(coinAwardedKey) ?? false;
 
         if (_mode != EditMode.edit && !alreadyAwarded && recordToSave.recordDate == today) {
-          final currentCoins = userProfile?['sleep_coins'] ?? 0;
+          // final currentCoins = userProfile?['sleep_coins'] ?? 0; // No longer needed as updateSleepCoins handles addition
           var earnedCoins = (duration.inMinutes > 480) ? 480 : duration.inMinutes;
 
           // Add bonus coins if the goal is achieved
@@ -205,10 +205,16 @@ class _SleepEditScreenState extends State<SleepEditScreen> {
             earnedCoins += 100;
           }
 
+          // Apply Friday bonus
+          if (isSaturday(recordToSave.recordDate)) { // Use the isSaturday helper
+            earnedCoins *= 2;
+          }
+
           if (earnedCoins > 0) {
-            final newTotalCoins = currentCoins + earnedCoins;
-            final username = prefs.getString('userName') ?? '';
-            await _supabaseService.updateUser(id: userId, username: username, sleepCoins: newTotalCoins);
+            // final newTotalCoins = currentCoins + earnedCoins; // No longer needed
+            // final username = prefs.getString('userName') ?? ''; // No longer needed for coin update
+            // await _supabaseService.updateUser(id: userId, username: username, sleepCoins: newTotalCoins); // Replace with new RPC
+            await _supabaseService.updateSleepCoins(userId: userId, coinsToAdd: earnedCoins); // Use new RPC
             await prefs.setBool(coinAwardedKey, true);
 
             if (mounted) {

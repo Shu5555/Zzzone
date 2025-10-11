@@ -1,28 +1,29 @@
 import 'package:flutter/material.dart';
 import '../models/gacha_config.dart';
 import '../models/gacha_item.dart';
+import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
 class MultiGachaResultScreen extends StatelessWidget {
-  final List<GachaItem> items;
+  final List<GachaItemWithNewStatus> itemsWithStatus; // Change this line
   final GachaConfig config;
 
   const MultiGachaResultScreen({
     super.key,
-    required this.items,
+    required this.itemsWithStatus, // Change this line
     required this.config,
   });
 
   @override
   Widget build(BuildContext context) {
     final rarityCounts = <String, int>{};
-    for (var item in items) {
-      rarityCounts[item.rarityId] = (rarityCounts[item.rarityId] ?? 0) + 1;
+    for (var itemWithStatus in itemsWithStatus) { // Iterate through itemsWithStatus
+      rarityCounts[itemWithStatus.item.rarityId] = (rarityCounts[itemWithStatus.item.rarityId] ?? 0) + 1;
     }
 
     int highestOrder = 0;
-    for (var item in items) {
-      final rarity = config.rarities.firstWhere((r) => r.id == item.rarityId);
-      if (rarity.name.length > highestOrder) { // A simple way to find a 'high' rarity without order
+    for (var itemWithStatus in itemsWithStatus) { // Iterate through itemsWithStatus
+      final rarity = config.rarities.firstWhere((r) => r.id == itemWithStatus.item.rarityId); // Use itemWithStatus.item
+      if (rarity.name.length > highestOrder) {
         highestOrder = rarity.name.length;
       }
     }
@@ -58,10 +59,12 @@ class MultiGachaResultScreen extends StatelessWidget {
                 mainAxisSpacing: 12,
                 childAspectRatio: 0.7,
               ),
-              itemCount: items.length,
+              itemCount: itemsWithStatus.length,
               itemBuilder: (context, index) {
-                final item = items[index];
+                final itemWithStatus = itemsWithStatus[index]; // Get GachaItemWithNewStatus
+                final item = itemWithStatus.item; // Get the GachaItem
                 final rarity = item.rarity;
+                final bool isNew = itemWithStatus.isNew; // Get the isNew status
                 final isHighest = rarity.name.length == highestOrder;
 
                 return Card(
@@ -71,39 +74,66 @@ class MultiGachaResultScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     side: isHighest ? BorderSide(color: rarity.color, width: 2) : BorderSide.none,
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Text(
-                          '"${item.text}"',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
+                  child: Stack( // "NEW!" を重ねるために Stack を使用
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Text(
+                              '"${item.text}"',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: rarity.color,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                rarity.name,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: rarity.color,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            rarity.name,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                      ),
+                      if (isNew) // "NEW!" を条件付きで表示
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.redAccent,
+                              borderRadius: BorderRadius.only(
+                                topRight: Radius.circular(12),
+                                bottomLeft: Radius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'NEW!',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ],
-                    ),
+                    ],
                   ),
                 );
               },

@@ -19,12 +19,14 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   late TabController _tabController;
 
   int _userCoins = 0;
+  int _userGachaPoints = 0; // New state variable
+  int _userUltraRareTickets = 0; // New state variable
 
   @override
   void initState() {
     super.initState();
-    // Change length to 2 for two tabs
-    _tabController = TabController(length: 2, vsync: this);
+    // Change length to 3 for three tabs
+    _tabController = TabController(length: 3, vsync: this); // Changed from 2 to 3
     _shopDataFuture = _loadShopData();
   }
 
@@ -50,6 +52,8 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     if (mounted) {
       setState(() {
         _userCoins = userProfile?['sleep_coins'] ?? 0;
+        _userGachaPoints = userProfile?['gacha_points'] ?? 0; // Fetch gacha points
+        _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0; // Fetch ultra rare tickets
       });
     }
     
@@ -118,6 +122,64 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     }
   }
 
+  Future<void> _executeTicketPurchase({required String ticketId, required int cost}) async {
+    if (_userId == null) return;
+
+    if (_userGachaPoints < cost) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ガチャポイントが足りません。'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    try {
+      await _supabaseService.purchaseGachaTicket(userId: _userId!, cost: cost, ticketType: ticketId);
+      
+      setState(() {
+        _userGachaPoints -= cost;
+        _userUltraRareTickets += 1; // Assuming only one type of ticket for now
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('超激レア確定ガチャチケットを購入しました！')),
+      );
+
+    } on Exception catch (e) {
+      final message = e.toString();
+      String displayMessage = '購入に失敗しました。';
+      if (message.contains('insufficient_gacha_points')) {
+        displayMessage = 'ガチャポイントが足りません。';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(displayMessage), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Future<void> _showTicketConfirmationDialog({required String ticketId, required String ticketName, required int cost}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(ticketName),
+        content: Text('$cost P でこのチケットを購入しますか？'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('キャンセル'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('購入する'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _executeTicketPurchase(ticketId: ticketId, cost: cost);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -140,12 +202,21 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
               label: Text('$_userCoins C'),
             ),
           ),
+          // Display Gacha Points
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Chip(
+              avatar: const Icon(Icons.star, color: Colors.pinkAccent),
+              label: Text('$_userGachaPoints P'),
+            ),
+          ),
         ],
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
             Tab(text: '背景色'),
-            Tab(text: 'ガチャ'), // Add Gacha tab
+            Tab(text: 'ガチャ'),
+            Tab(text: 'ガチャポイント'), // New tab
           ],
         ),
       ),
@@ -156,6 +227,8 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
           _buildBackgroundShop(),
           // Tab 2: Gacha
           const GachaScreen(),
+          // Tab 3: Gacha Points Shop
+          _buildGachaPointShop(), // New method
         ],
       ),
     );
@@ -233,6 +306,53 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
           },
         );
       },
+    );
+  }
+
+  Widget _buildGachaPointShop() {
+    const ticketCost = 100; // Changed from 500 to 100
+    const ticketId = 'ultra_rare_guaranteed_ticket';
+    const ticketName = '超激レア確定ガチャチケット';
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            elevation: 2.0,
+            clipBehavior: Clip.antiAlias,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.confirmation_number, size: 40, color: Colors.yellow), // Changed color
+                  title: const Text(ticketName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  subtitle: Text('$ticketCost P で購入'), // Cost display
+                  trailing: Text('所持数: $_userUltraRareTickets'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ElevatedButton(
+                    onPressed: _userGachaPoints >= ticketCost
+                        ? () => _showTicketConfirmationDialog(ticketId: ticketId, ticketName: ticketName, cost: ticketCost)
+                        : null,
+                    child: const Text('購入'),
+                    style: ElevatedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(40), // Make button full width
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'ガチャポイントはガチャを引くことで獲得できます。',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
+          ),
+        ],
+      ),
     );
   }
 }

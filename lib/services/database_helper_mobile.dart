@@ -197,16 +197,32 @@ CREATE TABLE gacha_pull_history (
 
   // --- Gacha Quote Methods ---
 
-  Future<void> addUnlockedQuote(String quoteId) async {
+  Future<bool> addUnlockedQuote(String quoteId) async {
     final db = await instance.database;
-    await db.insert(
+
+    // Check if the quote already exists
+    final existingQuotes = await db.query(
       'unlocked_quotes',
-      {
-        'quote_id': quoteId,
-        'unlocked_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore, // Ignore if quote already exists
+      where: 'quote_id = ?',
+      whereArgs: [quoteId],
+      limit: 1,
     );
+
+    if (existingQuotes.isNotEmpty) {
+      // Quote already exists
+      return false;
+    } else {
+      // Quote does not exist, insert it
+      await db.insert(
+        'unlocked_quotes',
+        {
+          'quote_id': quoteId,
+          'unlocked_at': DateTime.now().toIso8601String(),
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace, // Use replace or just omit, as we've checked
+      );
+      return true;
+    }
   }
 
   Future<List<String>> getUnlockedQuoteIds() async {

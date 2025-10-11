@@ -4,14 +4,15 @@ import '../models/gacha_config.dart';
 import '../models/gacha_item.dart';
 import '../models/gacha_rarity.dart';
 import 'sequential_gacha_flow_screen.dart';
+import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
 class MultiGachaAnimationScreen extends StatefulWidget {
-  final List<GachaItem> items;
+  final List<GachaItemWithNewStatus> itemsWithStatus; // Change this line
   final GachaConfig config;
 
   const MultiGachaAnimationScreen({
     super.key,
-    required this.items,
+    required this.itemsWithStatus, // Change this line
     required this.config,
   });
 
@@ -29,7 +30,7 @@ class _MultiGachaAnimationScreenState extends State<MultiGachaAnimationScreen>
     super.initState();
 
     // Find the highest rarity in the pulled items
-    _highestRarity = widget.items.map((item) => item.rarity).reduce((a, b) => a.order > b.order ? a : b);
+    _highestRarity = widget.itemsWithStatus.map((itemWithStatus) => itemWithStatus.item.rarity).reduce((a, b) => a.order > b.order ? a : b);
 
     _rotationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
@@ -43,7 +44,7 @@ class _MultiGachaAnimationScreenState extends State<MultiGachaAnimationScreen>
           context,
           MaterialPageRoute(
             builder: (context) => SequentialGachaFlowScreen(
-              items: widget.items,
+              itemsWithStatus: widget.itemsWithStatus, // Pass itemsWithStatus
               config: widget.config,
             ),
           ),

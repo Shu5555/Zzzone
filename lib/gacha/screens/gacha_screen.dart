@@ -10,6 +10,7 @@ import '../models/gacha_rarity.dart';
 import '../services/gacha_data_loader.dart';
 import 'gacha_animation_screen.dart';
 import 'multi_gacha_animation_screen.dart';
+import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
 class GachaScreen extends StatefulWidget {
   const GachaScreen({super.key});
@@ -25,6 +26,7 @@ class _GachaScreenState extends State<GachaScreen> {
   String? _userId;
   int _userCoins = 0;
   int _gachaPoints = 0;
+  int _userUltraRareTickets = 0; // New state variable
   bool _isPulling = false;
 
   @override
@@ -54,6 +56,7 @@ class _GachaScreenState extends State<GachaScreen> {
       setState(() {
         _userCoins = userProfile?['sleep_coins'] ?? 0;
         _gachaPoints = userProfile?['gacha_points'] ?? 0;
+        _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0; // Fetch ultra rare tickets
       });
     }
 
@@ -75,7 +78,7 @@ class _GachaScreenState extends State<GachaScreen> {
       final randomItem = _performWeightedSelection(config, allItems);
 
       await _supabaseService.deductCoinsForGacha(_userId!, config.singlePullCost, 1);
-      await DatabaseHelper.instance.addUnlockedQuote(randomItem.id);
+      final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(randomItem.id); // Capture isNew
       await DatabaseHelper.instance.addGachaPull(randomItem.id, randomItem.rarity.id);
 
       setState(() {
@@ -85,7 +88,7 @@ class _GachaScreenState extends State<GachaScreen> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => GachaAnimationScreen(item: randomItem),
+          builder: (_) => GachaAnimationScreen(item: randomItem, isNew: isNew), // Pass isNew
         ),
       );
 
@@ -110,17 +113,15 @@ class _GachaScreenState extends State<GachaScreen> {
         return;
       }
 
-      final List<GachaItem> pulledItems = [];
+      final List<GachaItemWithNewStatus> pulledItemsWithStatus = []; // New list
       for (int i = 0; i < config.multiPullCount; i++) {
-        pulledItems.add(_performWeightedSelection(config, allItems));
+        final GachaItem item = _performWeightedSelection(config, allItems);
+        final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(item.id); // Capture isNew
+        await DatabaseHelper.instance.addGachaPull(item.id, item.rarity.id);
+        pulledItemsWithStatus.add(GachaItemWithNewStatus(item: item, isNew: isNew)); // Add to new list
       }
 
       await _supabaseService.deductCoinsForGacha(_userId!, config.multiPullCost, config.multiPullCount);
-
-      for (final item in pulledItems) {
-        await DatabaseHelper.instance.addUnlockedQuote(item.id);
-        await DatabaseHelper.instance.addGachaPull(item.id, item.rarity.id);
-      }
 
       setState(() {
         _userCoins -= config.multiPullCost;
@@ -130,7 +131,7 @@ class _GachaScreenState extends State<GachaScreen> {
       Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => MultiGachaAnimationScreen(
-            items: pulledItems,
+            itemsWithStatus: pulledItemsWithStatus, // Pass new list
             config: config,
           ),
         ),
@@ -168,6 +169,66 @@ class _GachaScreenState extends State<GachaScreen> {
     final randomItem = itemsInRarity[Random().nextInt(itemsInRarity.length)];
     randomItem.setRarity(selectedRarity);
     return randomItem;
+  }
+
+  GachaItem _performUltraRareSelection(GachaConfig config, List<GachaItem> allItems) {
+    final ultraRareRarities = config.rarities.where((r) => r.id == 'ultra_rare').toList(); // Changed line
+    if (ultraRareRarities.isEmpty) {
+      throw Exception('No ultra_rare rarities defined in config.'); // Updated error message
+    }
+
+    final List<GachaItem> eligibleItems = [];
+    for (final rarity in ultraRareRarities) {
+      eligibleItems.addAll(allItems.where((item) => item.rarityId == rarity.id));
+    }
+
+    if (eligibleItems.isEmpty) {
+      throw Exception('No ultra_rare items found.'); // Updated error message
+    }
+
+    final randomItem = eligibleItems[Random().nextInt(eligibleItems.length)];
+    // Attach the correct rarity for the selected item
+    final selectedRarity = config.rarities.firstWhere((r) => r.id == randomItem.rarityId);
+    randomItem.setRarity(selectedRarity);
+    return randomItem;
+  }
+
+  Future<void> _pullUltraRareGacha(GachaConfig config, List<GachaItem> allItems) async {
+    if (_isPulling || _userId == null) return;
+
+    setState(() => _isPulling = true);
+
+    try {
+      if (_userUltraRareTickets < 1) {
+        _showErrorDialog('超激レア確定ガチャチケットが足りません。');
+        setState(() => _isPulling = false);
+        return;
+      }
+
+      final guaranteedItem = _performUltraRareSelection(config, allItems);
+
+      await _supabaseService.consumeUltraRareTicket(_userId!);
+      final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(guaranteedItem.id);
+      await DatabaseHelper.instance.addGachaPull(guaranteedItem.id, guaranteedItem.rarity.id);
+
+      setState(() {
+        _userUltraRareTickets -= 1;
+        _gachaPoints += 1; // Still award gacha points for a pull
+      });
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GachaAnimationScreen(item: guaranteedItem, isNew: isNew),
+        ),
+      );
+
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isPulling = false);
+      }
+    }
   }
 
   void _showResultDialog(GachaItem item) {
@@ -299,6 +360,20 @@ class _GachaScreenState extends State<GachaScreen> {
                     ? const CircularProgressIndicator()
                     : Text('${config.multiPullCount}回引く (${config.multiPullCost} C)'),
               ),
+              if (_userUltraRareTickets > 0) ...[ // Conditionally display the button
+                const SizedBox(height: 16), // Add spacing
+                ElevatedButton(
+                  onPressed: _isPulling ? null : () => _pullUltraRareGacha(config, items), // onPressed is already null if tickets < 1
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    backgroundColor: Colors.yellow, // Distinct color for ticket pull
+                    foregroundColor: Colors.black,
+                  ),
+                  child: _isPulling
+                      ? const CircularProgressIndicator()
+                      : Text('超激レア確定ガチャ (${_userUltraRareTickets}枚所持)'),
+                ),
+              ],
             ],
           ),
         );
