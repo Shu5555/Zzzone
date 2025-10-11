@@ -3,7 +3,7 @@
   "items": [
     {
       "id": "quote_001",
-      "rarityId": "common",
+      "rarityId": "rare",
       "customData": {
         "text": "我思う、ゆえに我あり。",
         "author": "ルネ・デカルト"
@@ -11,7 +11,7 @@
     },
     {
       "id": "quote_002",
-      "rarityId": "common",
+      "rarityId": "super_rare",
       "customData": {
         "text": "知は力なり。",
         "author": "フランシス・ベーコン"
@@ -323,7 +323,7 @@
     },
     {
       "id": "quote_041",
-      "rarityId": "rare",
+      "rarityId": "super_rare",
       "customData": {
         "text": "内容のない思考は空虚であり、概念のない直観は盲目である。",
         "author": "カント"
@@ -491,18 +491,18 @@
     },
     {
     "id": "quote_062",
-    "rarityId": "ultra_rare",
+    "rarityId": "super_rare",
     "customData": {
       "text": "っていつか君と、また笑えますように",
-      "author": "kina0399"
+      "author": "Orangestar"
     }
     },
     {
     "id": "quote_063",
-    "rarityId": "ultra_rare",
+    "rarityId": "super_rare",
     "customData": {
       "text": "明日、最高の朝が来るのなら、そこできっと僕は立ち止まってしまうだろう。きっと最高の朝なんて来ないから、僕らは今日も歩いてゆける",
-      "author": "kina0399"
+      "author": "Orangestar"
     }
     },
     {
@@ -1143,6 +1143,342 @@
       "customData": {
         "text": "教え有りて類無し。",
         "author": "孔子"
+      }
+    },
+    {
+    "id": "quote_144",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "ちん子は素勃つ",
+      "author": "seiyun0808"
+    }
+    },
+    {
+    "id": "quote_145",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "人はいつ死ぬか分からないのだから、いつ死んでもいいように、抜ける時に抜きなさい。",
+      "author": "kina0399"
+    }
+    },
+    {
+    "id": "quote_146",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "布面積αが十分に小さく、1-α≒1と近似できるので、これは裸です。",
+      "author": "okmno4_0721"
+    }
+    },
+    {
+    "id": "quote_147",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "マリーを抱きしめたら、セロトニンがドバドバ出ると思うんですよ。その多幸感を味わったまま他界したいですよね。",
+      "author": "kou09427"
+    }
+    },
+    {
+    "id": "quote_148",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "谷間に家勃てて住みたい",
+      "author": "okmno4_0721"
+    }
+    },
+    {
+    "id": "quote_149",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "うおぉぉぉ!えっちすぎぃ!ちn(文章は当局により規制されています)",
+      "author": "kina0399"
+    }
+    },
+    {
+    "id": "quote_150",
+    "rarityId": "ultra_rare",
+    "customData": {
+      "text": "うおーーー！！！お〇たくにくにすげぇーーー！！！！！",
+      "author": "佐藤"
+    }
+    },
+    {
+      "id": "quote_151",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "天は人の上に人を造らず、人の下に人を造らず。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_152",
+      "rarityId": "rare",
+      "customData": {
+        "text": "独立の気力なき者は必ず人に依頼す、人に依頼する者は必ず人を恐る、人を恐るる者は必ず人にへつらうものなり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_153",
+      "rarityId": "rare",
+      "customData": {
+        "text": "進まざる者は必ず退き、退かざる者は必ず進む。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_154",
+      "rarityId": "common",
+      "customData": {
+        "text": "賢人と愚人との別は、学ぶと学ばざるとによって出来るものなり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_155",
+      "rarityId": "rare",
+      "customData": {
+        "text": "自由とわがままの境は他人の妨げをなすとなさざるとの間にあり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_156",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "明日死ぬかのように生きよ。永遠に生きるかのように学べ",
+        "author": "マハトマ・ガンジー"
+      }
+    },
+    {
+      "id": "quote_157",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "Stay hungry, stay foolish",
+        "author": "スティーブ・ジョブズ"
+      }
+    },
+    {
+      "id": "quote_158",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "全ての夢は叶います。もし追いかける勇気があるなら",
+        "author": "ウォルト・ディズニー"
+      }
+    },
+    {
+      "id": "quote_159",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "ペンは剣よりも強し。",
+        "author": "エドワード・ブルワー＝リットン"
+      }
+    },
+    {
+      "id": "quote_160",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "人間は、負けるとわかっていても、戦わねばならない時がある。",
+        "author": "中島らも"
+      }
+    },
+    {
+      "id": "quote_161",
+      "rarityId": "rare",
+      "customData": {
+        "text": "なりたかった自分になるのに遅すぎるということはない。",
+        "author": "ジョージ・エリオット"
+      }
+    },
+    {
+      "id": "quote_162",
+      "rarityId": "rare",
+      "customData": {
+        "text": "世界を変えたいなら、まず自分が変わりなさい。",
+        "author": "マハトマ・ガンジー"
+      }
+    },
+    {
+      "id": "quote_163",
+      "rarityId": "rare",
+      "customData": {
+        "text": "現状維持では、後退するばかりである。",
+        "author": "ウォルト・ディズニー"
+      }
+    },
+    {
+      "id": "quote_164",
+      "rarityId": "rare",
+      "customData": {
+        "text": "私が学んだことは、勇気とは恐怖の不在ではない。恐怖に打ち勝つことである",
+        "author": "ネルソン・マンデラ"
+      }
+    },
+    {
+      "id": "quote_165",
+      "rarityId": "rare",
+      "customData": {
+        "text": "最大の発見は、人間は自分の態度を変えることによって人生を変えることができるということです",
+        "author": "ウィリアム・ジェームズ"
+      }
+    },
+    {
+      "id": "quote_166",
+      "rarityId": "rare",
+      "customData": {
+        "text": "ミスをしない人間は、何もしない人間だけだ",
+        "author": "セオドア・ルーズベルト"
+      }
+    },
+    {
+      "id": "quote_167",
+      "rarityId": "rare",
+      "customData": {
+        "text": "成功者になろうとするな。価値のある人間になれ",
+        "author": "アルベルト・アインシュタイン"
+      }
+    },
+    {
+      "id": "quote_168",
+      "rarityId": "rare",
+      "customData": {
+        "text": "愛は敵を友に変えられる唯一の力",
+        "author": "マーティン・ルーサー・キング・ジュニア"
+      }
+    },
+    {
+      "id": "quote_169",
+      "rarityId": "rare",
+      "customData": {
+        "text": "他人や過去は変えられないが、未来と自分は変えられる",
+        "author": "エリック・バーン"
+      }
+    },
+    {
+      "id": "quote_170",
+      "rarityId": "rare",
+      "customData": {
+        "text": "かけがえのない人間になるためには、常に他人と違っていなければならない",
+        "author": "ココ・シャネル"
+      }
+    },
+    {
+      "id": "quote_171",
+      "rarityId": "rare",
+      "customData": {
+        "text": "逃げない、はればれと立ち向かう、それがぼくのモットーだ。",
+        "author": "岡本太郎"
+      }
+    },
+    {
+      "id": "quote_172",
+      "rarityId": "rare",
+      "customData": {
+        "text": "知って行わざるは、知らざるに同じ。",
+        "author": "貝原益軒"
+      }
+    },
+    {
+      "id": "quote_173",
+      "rarityId": "rare",
+      "customData": {
+        "text": "自ら労して自ら食うは、人生独立の本源なり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_174",
+      "rarityId": "common",
+      "customData": {
+        "text": "賢人と愚人との別は、学ぶと学ばざるとによって出来るものなり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_175",
+      "rarityId": "rare",
+      "customData": {
+        "text": "自由とわがままの境は他人の妨げをなすとなさざるとの間にあり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_176",
+      "rarityId": "common",
+      "customData": {
+        "text": "進まざる者は必ず退き、退かざる者は必ず進む。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_177",
+      "rarityId": "common",
+      "customData": {
+        "text": "学問は米をつきながらも出来るものなり。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_178",
+      "rarityId": "common",
+      "customData": {
+        "text": "世の中で一番悲しいことは、うそをつくことです。",
+        "author": "福沢諭吉"
+      }
+    },
+    {
+      "id": "quote_179",
+      "rarityId": "common",
+      "customData": {
+        "text": "怖れるべきは死ではない。真に生きていないことをこそ怖れよ。",
+        "author": "マルクス・アウレリウス"
+      }
+    },
+    {
+      "id": "quote_180",
+      "rarityId": "common",
+      "customData": {
+        "text": "必要なことはただ一つ、できると信じることだ",
+        "author": "アンソニー・ロビンズ"
+      }
+    },
+    {
+      "id": "quote_181",
+      "rarityId": "common",
+      "customData": {
+        "text": "努力は人が見てないところでするものだ。",
+        "author": "長嶋茂雄"
+      }
+    },
+    {
+      "id": "quote_182",
+      "rarityId": "common",
+      "customData": {
+        "text": "人生はシンプルです。全ての感情は美しい。",
+        "author": "作者不詳"
+      }
+    },
+    {
+      "id": "quote_183",
+      "rarityId": "common",
+      "customData": {
+        "text": "人生は短い。情熱を身にまとい、自分の夢を生きよう",
+        "author": "作者不詳"
+      }
+    },
+    {
+      "id": "quote_184",
+      "rarityId": "common",
+      "customData": {
+        "text": "人生とはあなたが出会う人々であり、その人たちとあなたが作るものだ。",
+        "author": "作者不詳"
+      }
+    },
+    {
+      "id": "quote_185",
+      "rarityId": "common",
+      "customData": {
+        "text": "君の人生を変えられるのは君だけだ。",
+        "author": "マジック・ジョンソン"
       }
     }
   ]
