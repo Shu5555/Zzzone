@@ -14,6 +14,9 @@ import 'ranking_screen.dart';
 import 'settings_screen.dart';
 import 'shop_screen.dart';
 import 'sleep_edit_screen.dart';
+import 'announcements_screen.dart';
+
+import '../services/announcement_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +28,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   // Services
   final _supabaseService = SupabaseRankingService();
+  final _announcementService = AnnouncementService();
 
   // State
   static const String _sleepStartTimeKey = 'sleep_start_time';
@@ -36,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _dailyQuoteAuthor = '';
   SleepRecord? _todayRecord;
   bool _isDrowsinessRecordable = false;
+  bool _hasUnreadAnnouncements = false;
 
   // Gacha related state
   List<GachaItem> _allGachaItems = [];
@@ -44,6 +49,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _checkUnreadStatus();
+  }
+
+  Future<void> _checkUnreadStatus() async {
+    final hasUnread = await _announcementService.hasUnreadAnnouncements();
+    if (mounted) {
+      setState(() {
+        _hasUnreadAnnouncements = hasUnread;
+      });
+    }
   }
 
   Future<void> _loadData() async {
@@ -208,10 +223,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateTo(Widget screen) async {
+    // お知らせ画面に遷移する場合、既読状態を更新
+    if (screen is AnnouncementsScreen) {
+      await _announcementService.updateLastCheckedAt();
+      if (mounted) {
+        setState(() {
+          _hasUnreadAnnouncements = false;
+        });
+      }
+    }
+
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),
     );
     _loadData(); // Refresh data when returning to home screen
+
+    // お知らせ画面から戻ってきた場合は未読チェックをスキップする
+    if (screen is! AnnouncementsScreen) {
+      _checkUnreadStatus();
+    }
   }
 
   String _formatDuration(Duration duration) {
@@ -230,6 +260,31 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text('Zzzone'),
         actions: [
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.info_outline),
+                tooltip: 'お知らせ',
+                onPressed: () => _navigateTo(const AnnouncementsScreen()),
+              ),
+              if (_hasUnreadAnnouncements)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 12,
+                      minHeight: 12,
+                    ),
+                  ),
+                ),
+            ],
+          ),
           IconButton(
             icon: const Icon(Icons.format_quote_outlined),
             tooltip: '名言一覧',

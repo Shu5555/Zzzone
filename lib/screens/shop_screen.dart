@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sleep_management_app/services/supabase_ranking_service.dart';
@@ -42,19 +43,37 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('userId');
 
-    if (_userId == null) {
+    // WebではuserIdがなくてもエラーにしない
+    if (_userId == null && !kIsWeb) {
       throw Exception('ランキングに参加してユーザーIDを有効にしてください。');
     }
-    
-    final userProfile = await _supabaseService.getUser(_userId!);
-    final unlockedItems = await _supabaseService.getUnlockedBackgrounds(_userId!);
-    
-    if (mounted) {
-      setState(() {
-        _userCoins = userProfile?['sleep_coins'] ?? 0;
-        _userGachaPoints = userProfile?['gacha_points'] ?? 0; // Fetch gacha points
-        _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0; // Fetch ultra rare tickets
-      });
+
+    List<String> unlockedItems = [];
+    if (kIsWeb) {
+      // Web: SharedPreferencesからデータを読み込む
+      if (mounted) {
+        setState(() {
+          _userCoins = prefs.getInt('sleep_coins') ?? 0;
+          _userGachaPoints = prefs.getInt('gacha_points') ?? 0;
+          _userUltraRareTickets = prefs.getInt('ultra_rare_tickets') ?? 0;
+        });
+      }
+      unlockedItems = prefs.getStringList('unlocked_backgrounds') ?? [];
+    } else {
+      // Mobile: Supabaseからデータを読み込む
+      if (_userId == null) {
+        throw Exception('ランキングに参加してユーザーIDを有効にしてください。');
+      }
+      final userProfile = await _supabaseService.getUser(_userId!);
+      unlockedItems = await _supabaseService.getUnlockedBackgrounds(_userId!);
+      
+      if (mounted) {
+        setState(() {
+          _userCoins = userProfile?['sleep_coins'] ?? 0;
+          _userGachaPoints = userProfile?['gacha_points'] ?? 0;
+          _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0;
+        });
+      }
     }
     
     return {
@@ -123,7 +142,7 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _executeTicketPurchase({required String ticketId, required int cost}) async {
-    if (_userId == null) return;
+    if (_userId == null && !kIsWeb) return;
 
     if (_userGachaPoints < cost) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -133,7 +152,15 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     }
 
     try {
-      await _supabaseService.purchaseGachaTicket(userId: _userId!, cost: cost, ticketType: ticketId);
+      if (kIsWeb) {
+        // Web: SharedPreferencesを更新
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('gacha_points', _userGachaPoints - cost);
+        await prefs.setInt('ultra_rare_tickets', _userUltraRareTickets + 1);
+      } else {
+        // Mobile: Supabaseを更新
+        await _supabaseService.purchaseGachaTicket(userId: _userId!, cost: cost, ticketType: ticketId);
+      }
       
       setState(() {
         _userGachaPoints -= cost;

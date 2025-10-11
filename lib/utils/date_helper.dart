@@ -20,7 +20,15 @@ String getLogicalDateString(DateTime dateTime) {
   return DateFormat('yyyy-MM-dd').format(logicalDate);
 }
 
-/// 指定された日付が土曜日であるかを判定します。
+/// 「ぐっすりサタデー」の対象期間（金曜 AM4:00 ～ 土曜 AM3:59）であるかを判定します。
 bool isSaturday(DateTime date) {
-  return date.weekday == DateTime.saturday;
+  // 金曜日かつ午前4時以降
+  if (date.weekday == DateTime.friday && date.hour >= 4) {
+    return true;
+  }
+  // 土曜日かつ午前4時より前
+  if (date.weekday == DateTime.saturday && date.hour < 4) {
+    return true;
+  }
+  return false;
 }

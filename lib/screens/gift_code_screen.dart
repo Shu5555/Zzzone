@@ -56,24 +56,22 @@ class _GiftCodeScreenState extends State<GiftCodeScreen> {
   String _getDisplayMessage(GiftCodeResult result) {
     if (result.success) {
       switch (result.rewardType) {
-        case 'coins':
+        case 'sleep_coins':
           return '${result.rewardValue}コインを獲得しました！';
-        case 'quote':
-          return '新しい名言を獲得しました！';
-        case 'background':
-          return '新しい背景をアンロックしました！';
+        case 'ultra_rare_ticket':
+          return '超激レア確定ガチャチケットを${result.rewardValue}枚獲得しました！';
         default:
           return '報酬を受け取りました！';
       }
     } else {
       switch (result.message) {
-        case 'invalid_code':
+        case 'code_not_found':
           return '無効なコードです。';
-        case 'expired':
+        case 'code_expired':
           return 'このコードの有効期限は切れています。';
-        case 'max_redemptions_reached':
+        case 'code_max_uses_reached':
           return 'このコードは上限回数まで使用されています。';
-        case 'already_redeemed':
+        case 'code_already_redeemed':
           return 'このコードは既に使用済みです。';
         case 'user_id_not_found':
           return 'エラーが発生しました。プロフィール設定を完了してください。';
