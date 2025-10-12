@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../utils/date_helper.dart'; // Import the date helper
+import 'ranking_quotes_screen.dart'; // Import the new screen
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -47,6 +48,17 @@ class _RankingScreenState extends State<RankingScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('睡眠時間ランキング'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.format_quote),
+            tooltip: '名言ランキング',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const RankingQuotesScreen()),
+              );
+            },
+          ),
+        ],
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
         future: _rankingFuture,

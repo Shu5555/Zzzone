@@ -38,6 +38,12 @@ class SupabaseRankingService {
     return sortedRecords.take(20).toList();
   }
 
+  Future<List<Map<String, dynamic>>> getRankingWithQuotes({String? date}) async {
+    final targetDate = date ?? getLogicalDateInJST();
+    final response = await _supabase.rpc('get_daily_ranking_with_quotes', params: {'p_date': targetDate});
+    return (response as List).map((item) => item as Map<String, dynamic>).toList();
+  }
+
   Future<Map<String, dynamic>?> getUser(String userId) async {
     try {
       final response = await _supabase
