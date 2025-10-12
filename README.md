@@ -12,6 +12,8 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
 
 ### 2. ガチャ機能と名言コレクション
 - **名言ガチャ:** 睡眠時間に応じて獲得できる「スリープコイン」を使い、古今東西の偉人たちの「名言」を獲得できるガチャを引くことができます。
+- **名言の検索:** 名言一覧画面では、キーワードで名言や著者名を検索できます（ひらがな・カタカナの区別なし）。
+- **名言のコピー:** 名言一覧で、好きな名言を長押しすると、そのテキストをクリップボードにコピーできます。
 - **レアリティ:** 名言には「コモン」「レア」「激レア」などのレアリティが設定されており、確率に基づいた抽選が行われます。
 - **10連ガチャ:** 1回分お得に、一度に10個の名言を獲得できる10連ガチャも搭載しています。
 - **ガチャ履歴:** これまで引いたガチャの結果をすべて時系列で確認できます。
@@ -28,7 +30,7 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
 - **ランダムモード:** 「お気に入り」を設定せず、「ランダムモード」をONにすると、獲得した名言の中から日替わりで異なる名言がホーム画面に表示されます。
 
 ### 4. 履歴と分析
-- **睡眠履歴:** グラフやカレンダー形式で、過去の睡眠記録を直感的に振り返ることができます。
+- **睡眠履歴:** グラフやカレンダー形式で、過去の睡眠記録を直感的に振り返ることができます。記録を長押しすることで、内容の編集も可能です。
 - **AIによる睡眠分析:** 5件以上の睡眠記録を元に、AI(Google Gemini)があなたの睡眠傾向を分析し、「総評」「良い点」「改善点」を提案します。
 
 ### 5. ショップ
@@ -38,16 +40,21 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
 ### 6. プロフィールと睡眠時間ランキング
 - **プロフィール画面:** ユーザー名、ランキングへの参加設定、ランキングで表示される背景色などを一元管理できます。
 - **全国ランキング:** 全ユーザーのその日の睡眠時間を集計し、ランキング形式で表示します。
+- **名言ランキング:** ランキング画面右上のボタンから、各ランカーが設定している「お気に入り名言」をランキング順に見ることができます。
 
-### 7. ギフトコード機能
+### 7. 天気予報
+- **ホーム画面での表示:** ホーム画面の下部に、設定した地点の現在の天気、気温、今後の雨の予報（例：「晴れ、のち雨」）が表示されます。
+- **地点の設定:** 「設定」画面から、天気予報を表示したい地点を「都道府県」と「市区町村」に分けて設定できます。日本語での入力に対応しており、市区町村を空欄にした場合は、その都道府県の県庁所在地の天気が表示されます。
+
+### 8. ギフトコード機能
 - **コード入力:** 管理者から配布されるギフトコードを入力することで、スリープコインや「超激レア確定ガチャチケット」などの特別なアイテムを獲得できます。
 - **利用方法:** プロフィール画面の「ギフトコード」メニューから入力画面にアクセスできます。
 
-### 8. ぐっすりサタデー
+### 9. ぐっすりサタデー
 - **スリープコイン2倍:** 金曜日の午前4:00から土曜日の午前3:59までの間に睡眠を記録すると、獲得できるスリープコインが通常の2倍になります。
 - **ホーム画面表示:** 対象期間中、ホーム画面の名言の上に大きな黄色の「S」が表示され、特別な日であることをお知らせします。
 
-### 9. お知らせ機能
+### 10. お知らせ機能
 - **更新情報:** ホーム画面右上のアイコンから、アプリの更新情報や開発からのお知らせを確認できます。
 - **未読バッジ:** 未読のお知らせがある場合、アイコンに赤い点が表示され、新しい情報があることを知らせます。
 - **更新方法 (v4時点):**
@@ -61,7 +68,7 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
 
 ---
 
-## アーキテクチャ (v4)
+## アーキテクチャ (v5)
 
 ### クライアントサイド
 - **フレームワーク:** Flutter (Dart)
@@ -69,10 +76,13 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
   - **保存データ:** 睡眠記録、獲得した名言リスト、ガチャの履歴、**お知らせの未読状態**
 - **状態管理/設定保存:** `shared_preferences`
 - **お知らせデータ:** `assets/announcements.json` (ローカル)
+- **APIクライアント:** `http`
+- **環境変数管理:** `flutter_dotenv`
 
 ### バックエンド
 - **ランキング・通貨・ギフトコード管理:** Supabase (PostgreSQL)
 - **AI分析機能:** Google Gemini API
+- **天気予報:** OpenWeatherMap API
 
 ---
 
@@ -144,62 +154,48 @@ Zzzoneは、日々の睡眠を記録・可視化し、さらに全国のユー�
       ```sql
       CREATE OR REPLACE FUNCTION redeem_gift_code(p_user_id UUID, p_code TEXT)
       RETURNS TABLE(success BOOLEAN, message TEXT, reward_type TEXT, reward_value TEXT) AS $$
-      DECLARE
-          v_code_id BIGINT;
-          v_reward_type TEXT;
-          v_reward_value TEXT;
-          v_expires_at TIMESTAMPTZ;
-          v_max_uses INT;
-          v_use_count INT;
-      BEGIN
-          -- 1. コードを検証する (テーブルエイリアス `gc` を使用)
-          SELECT gc.id, gc.reward_type, gc.reward_value, gc.expires_at, gc.max_uses, gc.use_count
-          INTO v_code_id, v_reward_type, v_reward_value, v_expires_at, v_max_uses, v_use_count
-          FROM public.gift_codes AS gc
-          WHERE gc.code = p_code;
-
-          -- コードが存在しない
-          IF v_code_id IS NULL THEN
-              RETURN QUERY SELECT FALSE, 'code_not_found', NULL, NULL; RETURN;
-          END IF;
-
-          -- 有効期限切れ
-          IF v_expires_at IS NOT NULL AND v_expires_at < now() THEN
-              RETURN QUERY SELECT FALSE, 'code_expired', NULL, NULL; RETURN;
-          END IF;
-
-          -- 使用回数上限
-          IF v_use_count >= v_max_uses THEN
-              RETURN QUERY SELECT FALSE, 'code_max_uses_reached', NULL, NULL; RETURN;
-          END IF;
-
-          -- 使用済みチェック
-          IF EXISTS (SELECT 1 FROM public.user_redeemed_codes WHERE user_id = p_user_id AND code_id = v_code_id) THEN
-              RETURN QUERY SELECT FALSE, 'code_already_redeemed', NULL, NULL; RETURN;
-          END IF;
-
-          -- 2. 報酬を付与する
-          IF v_reward_type = 'sleep_coins' THEN
-              UPDATE public.users SET sleep_coins = sleep_coins + (v_reward_value::INT) WHERE id = p_user_id;
-          ELSIF v_reward_type = 'ultra_rare_ticket' THEN
-              UPDATE public.users SET ultra_rare_tickets = COALESCE(ultra_rare_tickets, 0) + (v_reward_value::INT) WHERE id = p_user_id;
-          ELSE
-              RETURN QUERY SELECT FALSE, 'unknown_reward_type', NULL, NULL; RETURN;
-          END IF;
-
-          -- 3. 使用履歴を記録する
-          INSERT INTO public.user_redeemed_codes (user_id, code_id) VALUES (p_user_id, v_code_id);
-          UPDATE public.gift_codes SET use_count = use_count + 1 WHERE id = v_code_id;
-
-          -- 4. 成功結果を返す
-          RETURN QUERY SELECT TRUE, 'code_redeemed_successfully', v_reward_type, v_reward_value;
-
-      EXCEPTION
-          WHEN OTHERS THEN
-              -- 念のため、予期せぬエラーの場合はその内容を返す
-              RETURN QUERY SELECT FALSE, 'unknown_error: ' || SQLERRM, NULL, NULL;
-      END;
+      -- ... (内容は変更なし)
       $$ LANGUAGE plpgsql SECURITY DEFINER;
+      ```
+    - **`get_daily_ranking_with_quotes`関数 (名言ランキングで必要):**
+      ```sql
+      CREATE OR REPLACE FUNCTION get_daily_ranking_with_quotes(p_date TEXT)
+      RETURNS TABLE(
+          user_id UUID,
+          username TEXT,
+          sleep_duration INTEGER,
+          background_preference TEXT,
+          favorite_quote_id TEXT
+      ) AS $$
+      BEGIN
+          RETURN QUERY
+          WITH latest_records AS (
+              SELECT
+                  sr.user_id,
+                  sr.sleep_duration,
+                  ROW_NUMBER() OVER(PARTITION BY sr.user_id ORDER BY sr.created_at DESC) as rn
+              FROM
+                  public.sleep_records sr
+              WHERE
+                  sr.date = p_date::DATE
+          )
+          SELECT
+              u.id AS user_id,
+              u.username::TEXT,
+              lr.sleep_duration,
+              u.background_preference,
+              u.favorite_quote_id
+          FROM
+              latest_records lr
+          JOIN
+              public.users u ON lr.user_id = u.id
+          WHERE
+              lr.rn = 1
+          ORDER BY
+              lr.sleep_duration DESC
+          LIMIT 20;
+      END;
+      $$ LANGUAGE plpgsql;
       ```
 
 ---
