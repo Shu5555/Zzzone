@@ -19,7 +19,7 @@ const RESOURCES = {"flutter.js": "383e55f7f3cce5be08fcf1f3881f585c",
 "assets/assets/gacha/gacha_items.json": "cc0f1296bf47bf9e8e3c4dfdc8d8c7be",
 "assets/assets/gacha/gacha_config.json": "133797ee44e87d4d5f2c154935168af0",
 "assets/fonts/MPLUSRounded1c-Medium.ttf": "22e0b5f50d889a011b32dba7ca806b6b",
-"assets/fonts/MaterialIcons-Regular.otf": "e4b692b9db1aa42827b2e4af6042ebd6",
+"assets/fonts/MaterialIcons-Regular.otf": "29d8dd69170bc1e0378e704f637747ad",
 "assets/fonts/MPLUSRounded1c-Bold.ttf": "9cd5c0b9269ecc2335307ff09861c38f",
 "assets/fonts/MPLUSRounded1c-Black.ttf": "5dc0dbd15beac01ee14c34130e16e323",
 "assets/fonts/MPLUSRounded1c-Thin.ttf": "121fefdeb00aa8e9855f909dd6f3708d",
@@ -42,9 +42,9 @@ const RESOURCES = {"flutter.js": "383e55f7f3cce5be08fcf1f3881f585c",
 "canvaskit/canvaskit.js.symbols": "74a84c23f5ada42fe063514c587968c6",
 "canvaskit/skwasm.js.symbols": "c3c05bd50bdf59da8626bbe446ce65a3",
 "favicon.png": "1f06100bb6c1e9e4a858d4b69abf92ac",
-"flutter_bootstrap.js": "74c3c45463d74e4d939ed510b12108a7",
+"flutter_bootstrap.js": "4a0a19fe16de2e44da8894ac7e0363a8",
 "version.json": "368ed262cb56c596e7b99730580af037",
-"main.dart.js": "4e05193dbde5ef80529175f4c072aede"};
+"main.dart.js": "d3744af0831212f0eed219a1957f5e01"};
 // The application shell files that are downloaded before a service worker can
 // start.
 const CORE = ["main.dart.js",
