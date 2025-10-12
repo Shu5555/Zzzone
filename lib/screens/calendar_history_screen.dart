@@ -114,7 +114,8 @@ class _CalendarHistoryScreenState extends State<CalendarHistoryScreen> {
                           return Card(
                             margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             child: ListTile(
-                              onTap: () => _navigateToEditScreen(record),
+                              onLongPress: () => _navigateToEditScreen(record),
+                              onTap: null, // タップは無効化
                               title: Row(children: [
                                 Expanded(
                                   child: Text(

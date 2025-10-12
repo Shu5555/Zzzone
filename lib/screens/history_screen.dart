@@ -214,7 +214,8 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
         ]),
         subtitle: Text('''睡眠時間: ${record.duration.inHours}h ${record.duration.inMinutes.remainder(60)}m
 ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(record.wakeUpTime)}'''),
-        onTap: () => _navigateToEditScreen(record),
+        onTap: null, // タップは無効化
+        onLongPress: () => _navigateToEditScreen(record), // 長押しで編集画面へ
         isThreeLine: true,
       ),
     );
@@ -531,7 +532,8 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
         ]),
         subtitle: Text('''睡眠時間: ${record.duration.inHours}h ${record.duration.inMinutes.remainder(60)}m
 ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(record.wakeUpTime)}'''),
-        onTap: () => _navigateToEditScreen(record),
+        onTap: null, // タップは無効化
+        onLongPress: () => _navigateToEditScreen(record), // 長押しで編集画面へ
         isThreeLine: true,
       ),
     );

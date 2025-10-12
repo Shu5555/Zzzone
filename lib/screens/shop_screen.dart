@@ -146,7 +146,7 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
 
     if (_userGachaPoints < cost) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ガチャポイントが足りません。'), backgroundColor: Colors.red),
+        const SnackBar(content: Text('ポイントが足りません。'), backgroundColor: Colors.red),
       );
       return;
     }
@@ -175,7 +175,7 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
       final message = e.toString();
       String displayMessage = '購入に失敗しました。';
       if (message.contains('insufficient_gacha_points')) {
-        displayMessage = 'ガチャポイントが足りません。';
+        displayMessage = 'ポイントが足りません。';
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(displayMessage), backgroundColor: Colors.red),
@@ -213,15 +213,6 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
       appBar: AppBar(
         title: const Text('ショップ'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'ガチャ履歴',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const GachaHistoryScreen()),
-              );
-            },
-          ),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: Chip(
@@ -243,7 +234,7 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
           tabs: const [
             Tab(text: '背景色'),
             Tab(text: 'ガチャ'),
-            Tab(text: 'ガチャポイント'), // New tab
+            Tab(text: 'ポイント'), // New tab
           ],
         ),
       ),
@@ -374,7 +365,7 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
           ),
           const SizedBox(height: 20),
           Text(
-            'ガチャポイントはガチャを引くことで獲得できます。',
+            'ポイントはガチャを引くことで獲得できます。',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.white70),
           ),

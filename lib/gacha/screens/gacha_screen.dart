@@ -9,6 +9,7 @@ import '../models/gacha_item.dart';
 import '../models/gacha_rarity.dart';
 import '../services/gacha_data_loader.dart';
 import 'gacha_animation_screen.dart';
+import 'gacha_history_screen.dart';
 import 'multi_gacha_animation_screen.dart';
 import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
@@ -281,6 +282,46 @@ class _GachaScreenState extends State<GachaScreen> {
     );
   }
 
+  Future<void> _showGachaProbabilities(BuildContext context, GachaConfig config) async {
+    try {
+      // Sort rarities by order for display
+      final sortedRarities = List.from(config.rarities)..sort((a, b) => b.order.compareTo(a.order));
+
+      await showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('ガチャ排出確率'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: sortedRarities.map((rarity) {
+                  final probabilityPercent = (rarity.probability * 100).toStringAsFixed(2);
+                  return ListTile(
+                    leading: Icon(Icons.circle, color: rarity.color, size: 16),
+                    title: Text(rarity.name),
+                    trailing: Text('$probabilityPercent %'),
+                  );
+                }).toList(),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('閉じる'),
+              ),
+            ],
+          );
+        },
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('確率の読み込みに失敗しました: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<GachaInitData>(
@@ -333,6 +374,28 @@ class _GachaScreenState extends State<GachaScreen> {
                       ),
                     ],
                   ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.percent_outlined),
+                      label: const Text('排出確率'),
+                      onPressed: () => _showGachaProbabilities(context, config),
+                    ),
+                    TextButton.icon(
+                      icon: const Icon(Icons.history),
+                      label: const Text('ガチャ履歴'),
+                      onPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const GachaHistoryScreen()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
               const Spacer(),

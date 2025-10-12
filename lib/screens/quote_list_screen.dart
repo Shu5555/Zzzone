@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../gacha/models/gacha_config.dart';
@@ -60,7 +61,9 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
       item.setRarity(rarity);
     }
 
-    final unlockedQuotes = allItems.where((item) => unlockedQuoteIds.contains(item.id)).toList();
+    // For performance optimization, convert the list to a Set for O(1) lookups.
+    final unlockedQuoteIdSet = unlockedQuoteIds.toSet();
+    final unlockedQuotes = allItems.where((item) => unlockedQuoteIdSet.contains(item.id)).toList();
 
     // Group quotes by rarity
     final grouped = <String, List<GachaItem>>{};
@@ -156,6 +159,13 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
                               ? null
                               : Icon(isFavorite ? Icons.star : Icons.star_border, color: isFavorite ? Colors.amber : null),
                           onTap: _favoriteQuoteId == 'random' ? null : () => _setFavoriteQuote(quote.id),
+                          onLongPress: () {
+                            final textToCopy = '"${quote.text}" - ${quote.author}';
+                            Clipboard.setData(ClipboardData(text: textToCopy));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('名言をコピーしました')),
+                            );
+                          },
                         ),
                         if (index < quotesInRarity.length - 1)
                           const Divider(height: 1, indent: 16, endIndent: 16),
