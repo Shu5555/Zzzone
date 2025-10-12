@@ -30,7 +30,7 @@ class _MultiGachaAnimationScreenState extends State<MultiGachaAnimationScreen>
     super.initState();
 
     // Find the highest rarity in the pulled items
-    _highestRarity = widget.itemsWithStatus.map((itemWithStatus) => itemWithStatus.item.rarity).reduce((a, b) => a.order > b.order ? a : b);
+    _highestRarity = widget.itemsWithStatus.map((itemWithStatus) => itemWithStatus.promotionPath.last.rarity).reduce((a, b) => a.order > b.order ? a : b);
 
     _rotationController = AnimationController(
       duration: const Duration(milliseconds: 1500),

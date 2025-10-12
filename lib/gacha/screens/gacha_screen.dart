@@ -11,6 +11,7 @@ import '../services/gacha_data_loader.dart';
 import 'gacha_animation_screen.dart';
 import 'gacha_history_screen.dart';
 import 'multi_gacha_animation_screen.dart';
+import 'gacha_sequence_controller.dart';
 import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
 class GachaScreen extends StatefulWidget {

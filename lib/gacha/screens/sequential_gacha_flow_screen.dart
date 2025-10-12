@@ -46,7 +46,7 @@ class _SequentialGachaFlowScreenState extends State<SequentialGachaFlowScreen> {
   @override
   Widget build(BuildContext context) {
     final itemWithStatus = widget.itemsWithStatus[_currentIndex]; // Get GachaItemWithNewStatus
-    final item = itemWithStatus.item; // Get the GachaItem
+    final item = itemWithStatus.promotionPath.last; // Get the GachaItem
     final rarity = item.rarity;
     final bool isNew = itemWithStatus.isNew; // Get the isNew status
 
