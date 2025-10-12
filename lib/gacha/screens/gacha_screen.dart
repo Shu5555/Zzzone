@@ -27,7 +27,7 @@ class _GachaScreenState extends State<GachaScreen> {
   String? _userId;
   int _userCoins = 0;
   int _gachaPoints = 0;
-  int _userUltraRareTickets = 0; // New state variable
+  int _userUltraRareTickets = 0;
   bool _isPulling = false;
 
   @override
@@ -44,12 +44,18 @@ class _GachaScreenState extends State<GachaScreen> {
     }
 
     final userProfile = await _supabaseService.getUser(_userId!);
-    final config = await GachaDataLoader.loadConfig('assets/gacha/gacha_config.json');
-    final items = await GachaDataLoader.loadItems('assets/gacha/gacha_items.json');
+    final config = await GachaDataLoader.loadConfig(
+      'assets/gacha/gacha_config.json',
+    );
+    final items = await GachaDataLoader.loadItems(
+      'assets/gacha/gacha_items.json',
+    );
 
-    // Attach rarity info to all items
     for (var item in items) {
-      final rarity = config.rarities.firstWhere((r) => r.id == item.rarityId, orElse: () => config.rarities.first);
+      final rarity = config.rarities.firstWhere(
+        (r) => r.id == item.rarityId,
+        orElse: () => config.rarities.first,
+      );
       item.setRarity(rarity);
     }
 
@@ -57,97 +63,17 @@ class _GachaScreenState extends State<GachaScreen> {
       setState(() {
         _userCoins = userProfile?['sleep_coins'] ?? 0;
         _gachaPoints = userProfile?['gacha_points'] ?? 0;
-        _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0; // Fetch ultra rare tickets
+        _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0;
       });
     }
 
     return GachaInitData(config: config, items: items);
   }
 
-  Future<void> _pullGacha(GachaConfig config, List<GachaItem> allItems) async {
-    if (_isPulling || _userId == null) return;
-
-    setState(() => _isPulling = true);
-
-    try {
-      if (_userCoins < config.singlePullCost) {
-        _showErrorDialog('スリープコインが足りません。');
-        setState(() => _isPulling = false);
-        return;
-      }
-
-      final randomItem = _performWeightedSelection(config, allItems);
-
-      await _supabaseService.deductCoinsForGacha(_userId!, config.singlePullCost, 1);
-      final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(randomItem.id); // Capture isNew
-      await DatabaseHelper.instance.addGachaPull(randomItem.id, randomItem.rarity.id);
-
-      setState(() {
-        _userCoins -= config.singlePullCost;
-        _gachaPoints += 1;
-      });
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => GachaAnimationScreen(item: randomItem, isNew: isNew), // Pass isNew
-        ),
-      );
-
-    } catch (e) {
-      _showErrorDialog(e.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _isPulling = false);
-      }
-    }
-  }
-
-  Future<void> _pullMultiGacha(GachaConfig config, List<GachaItem> allItems) async {
-    if (_isPulling || _userId == null) return;
-
-    setState(() => _isPulling = true);
-
-    try {
-      if (_userCoins < config.multiPullCost) {
-        _showErrorDialog('スリープコインが足りません。');
-        setState(() => _isPulling = false);
-        return;
-      }
-
-      final List<GachaItemWithNewStatus> pulledItemsWithStatus = []; // New list
-      for (int i = 0; i < config.multiPullCount; i++) {
-        final GachaItem item = _performWeightedSelection(config, allItems);
-        final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(item.id); // Capture isNew
-        await DatabaseHelper.instance.addGachaPull(item.id, item.rarity.id);
-        pulledItemsWithStatus.add(GachaItemWithNewStatus(item: item, isNew: isNew)); // Add to new list
-      }
-
-      await _supabaseService.deductCoinsForGacha(_userId!, config.multiPullCost, config.multiPullCount);
-
-      setState(() {
-        _userCoins -= config.multiPullCost;
-        _gachaPoints += config.multiPullCount;
-      });
-
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => MultiGachaAnimationScreen(
-            itemsWithStatus: pulledItemsWithStatus, // Pass new list
-            config: config,
-          ),
-        ),
-      );
-
-    } catch (e) {
-      _showErrorDialog(e.toString());
-    } finally {
-      if (mounted) {
-        setState(() => _isPulling = false);
-      }
-    }
-  }
-
-  GachaItem _performWeightedSelection(GachaConfig config, List<GachaItem> allItems) {
+  GachaItem _performWeightedSelection(
+    GachaConfig config,
+    List<GachaItem> allItems,
+  ) {
     final randomValue = Random().nextDouble();
     double cumulativeProbability = 0.0;
     GachaRarity? selectedRarity;
@@ -163,66 +89,128 @@ class _GachaScreenState extends State<GachaScreen> {
     }
     selectedRarity ??= sortedRarities.last;
 
-    final itemsInRarity = allItems.where((item) => item.rarityId == selectedRarity!.id).toList();
+    final itemsInRarity = allItems
+        .where((item) => item.rarityId == selectedRarity!.id)
+        .toList();
     if (itemsInRarity.isEmpty) {
-      throw Exception('No items found for rarity: ${selectedRarity.id}');
+      final lowestRarity = sortedRarities.first;
+      final fallbackItems = allItems
+          .where((item) => item.rarityId == lowestRarity.id)
+          .toList();
+      if (fallbackItems.isEmpty)
+        throw Exception('No items found for any rarity.');
+      final randomItem = fallbackItems[Random().nextInt(fallbackItems.length)];
+      randomItem.setRarity(lowestRarity);
+      return randomItem;
     }
     final randomItem = itemsInRarity[Random().nextInt(itemsInRarity.length)];
     randomItem.setRarity(selectedRarity);
     return randomItem;
   }
 
-  GachaItem _performUltraRareSelection(GachaConfig config, List<GachaItem> allItems) {
-    final ultraRareRarities = config.rarities.where((r) => r.id == 'ultra_rare').toList(); // Changed line
-    if (ultraRareRarities.isEmpty) {
-      throw Exception('No ultra_rare rarities defined in config.'); // Updated error message
-    }
+  List<GachaItem> _performPromotionDraw(
+    GachaItem initialItem,
+    GachaConfig config,
+    List<GachaItem> allItems,
+  ) {
+    final List<GachaItem> promotionPath = [initialItem];
+    GachaItem currentItem = initialItem;
 
-    final List<GachaItem> eligibleItems = [];
-    for (final rarity in ultraRareRarities) {
-      eligibleItems.addAll(allItems.where((item) => item.rarityId == rarity.id));
-    }
+    while (true) {
+      final random = Random().nextDouble();
+      String? nextRarityId;
+      double promotionChance = 0.0;
 
-    if (eligibleItems.isEmpty) {
-      throw Exception('No ultra_rare items found.'); // Updated error message
-    }
+      // DEBUG: Temporarily increased promotion rates
+      switch (currentItem.rarity.id) {
+        case 'common':
+          promotionChance = 0.5; // 50%
+          nextRarityId = 'rare';
+          break;
+        case 'rare':
+          promotionChance = 0.5; // 50%
+          nextRarityId = 'super_rare';
+          break;
+        case 'super_rare':
+          promotionChance = 0.5; // 50%
+          nextRarityId = 'ultra_rare';
+          break;
+        case 'ultra_rare':
+          promotionChance = 0.5; // 50%
+          nextRarityId = 'own_chin';
+          break;
+        default:
+          return promotionPath;
+      }
 
-    final randomItem = eligibleItems[Random().nextInt(eligibleItems.length)];
-    // Attach the correct rarity for the selected item
-    final selectedRarity = config.rarities.firstWhere((r) => r.id == randomItem.rarityId);
-    randomItem.setRarity(selectedRarity);
-    return randomItem;
+      if (random < promotionChance) {
+        final promotedItems = allItems
+            .where((item) => item.rarityId == nextRarityId)
+            .toList();
+        if (promotedItems.isNotEmpty) {
+          currentItem = promotedItems[Random().nextInt(promotedItems.length)];
+          currentItem.setRarity(
+            config.rarities.firstWhere((r) => r.id == nextRarityId),
+          );
+          promotionPath.add(currentItem);
+        } else {
+          return promotionPath;
+        }
+      } else {
+        return promotionPath;
+      }
+    }
   }
 
-  Future<void> _pullUltraRareGacha(GachaConfig config, List<GachaItem> allItems) async {
+  Future<void> _pullGacha(GachaConfig config, List<GachaItem> allItems) async {
     if (_isPulling || _userId == null) return;
-
     setState(() => _isPulling = true);
 
     try {
-      if (_userUltraRareTickets < 1) {
-        _showErrorDialog('超激レア確定ガチャチケットが足りません。');
-        setState(() => _isPulling = false);
+      if (_userCoins < config.singlePullCost) {
+        _showErrorDialog('スリープコインが足りません。');
         return;
       }
 
-      final guaranteedItem = _performUltraRareSelection(config, allItems);
+      final initialItem = _performWeightedSelection(config, allItems);
+      final promotionPath = _performPromotionDraw(
+        initialItem,
+        config,
+        allItems,
+      );
+      final finalItem = promotionPath.last;
 
-      await _supabaseService.consumeUltraRareTicket(_userId!);
-      final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(guaranteedItem.id);
-      await DatabaseHelper.instance.addGachaPull(guaranteedItem.id, guaranteedItem.rarity.id);
+      await _supabaseService.deductCoinsForGacha(
+        _userId!,
+        config.singlePullCost,
+        1,
+      );
+      final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(
+        finalItem.id,
+      );
+      await DatabaseHelper.instance.addGachaPull(
+        finalItem.id,
+        finalItem.rarity.id,
+      );
 
       setState(() {
-        _userUltraRareTickets -= 1;
-        _gachaPoints += 1; // Still award gacha points for a pull
+        _userCoins -= config.singlePullCost;
+        _gachaPoints += 1;
       });
+
+      final itemWithStatus = GachaItemWithNewStatus(
+        promotionPath: promotionPath,
+        isNew: isNew,
+      );
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => GachaAnimationScreen(item: guaranteedItem, isNew: isNew),
+          builder: (_) => GachaSequenceController(
+            itemsWithStatus: [itemWithStatus],
+            config: config,
+          ),
         ),
       );
-
     } catch (e) {
       _showErrorDialog(e.toString());
     } finally {
@@ -232,38 +220,157 @@ class _GachaScreenState extends State<GachaScreen> {
     }
   }
 
-  void _showResultDialog(GachaItem item) {
-    final rarity = item.rarity;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          rarity.name,
-          style: TextStyle(color: rarity.color, fontWeight: FontWeight.bold),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '"${item.text}"',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontStyle: FontStyle.italic),
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text('- ${item.author}', style: Theme.of(context).textTheme.bodyMedium),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+  Future<void> _pullMultiGacha(
+    GachaConfig config,
+    List<GachaItem> allItems,
+  ) async {
+    if (_isPulling || _userId == null) return;
+    setState(() => _isPulling = true);
+
+    try {
+      if (_userCoins < config.multiPullCost) {
+        _showErrorDialog('スリープコインが足りません。');
+        return;
+      }
+
+      int promotionCount = 0;
+      const maxPromotions = 3;
+      final List<GachaItemWithNewStatus> pulledItemsWithStatus = [];
+
+      for (int i = 0; i < config.multiPullCount; i++) {
+        final initialItem = _performWeightedSelection(config, allItems);
+        List<GachaItem> promotionPath = [initialItem];
+
+        if (promotionCount < maxPromotions) {
+          final path = _performPromotionDraw(initialItem, config, allItems);
+          if (path.length > 1) {
+            promotionCount++;
+          }
+          promotionPath = path;
+        }
+
+        final finalItem = promotionPath.last;
+        final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(
+          finalItem.id,
+        );
+        await DatabaseHelper.instance.addGachaPull(
+          finalItem.id,
+          finalItem.rarity.id,
+        );
+        pulledItemsWithStatus.add(
+          GachaItemWithNewStatus(promotionPath: promotionPath, isNew: isNew),
+        );
+      }
+
+      await _supabaseService.deductCoinsForGacha(
+        _userId!,
+        config.multiPullCost,
+        config.multiPullCount,
+      );
+
+      setState(() {
+        _userCoins -= config.multiPullCost;
+        _gachaPoints += config.multiPullCount;
+      });
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GachaSequenceController(
+            itemsWithStatus: pulledItemsWithStatus,
+            config: config,
           ),
-        ],
-      ),
+        ),
+      );
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isPulling = false);
+      }
+    }
+  }
+
+  GachaItem _performUltraRareSelection(
+    GachaConfig config,
+    List<GachaItem> allItems,
+  ) {
+    final ultraRareRarities = config.rarities
+        .where((r) => r.id == 'ultra_rare')
+        .toList();
+    if (ultraRareRarities.isEmpty) {
+      throw Exception('No ultra_rare rarities defined in config.');
+    }
+
+    final List<GachaItem> eligibleItems = [];
+    for (final rarity in ultraRareRarities) {
+      eligibleItems.addAll(
+        allItems.where((item) => item.rarityId == rarity.id),
+      );
+    }
+
+    if (eligibleItems.isEmpty) {
+      throw Exception('No ultra_rare items found.');
+    }
+
+    final randomItem = eligibleItems[Random().nextInt(eligibleItems.length)];
+    final selectedRarity = config.rarities.firstWhere(
+      (r) => r.id == randomItem.rarityId,
     );
+    randomItem.setRarity(selectedRarity);
+    return randomItem;
+  }
+
+  Future<void> _pullUltraRareGacha(
+    GachaConfig config,
+    List<GachaItem> allItems,
+  ) async {
+    if (_isPulling || _userId == null) return;
+
+    setState(() => _isPulling = true);
+
+    try {
+      if (_userUltraRareTickets < 1) {
+        _showErrorDialog('超激レア確定ガチャチケットが足りません。');
+        return;
+      }
+
+      final initialItem = _performUltraRareSelection(config, allItems);
+      final promotionPath = [initialItem]; // No promotion for ticket gacha
+
+      await _supabaseService.consumeUltraRareTicket(_userId!);
+      final bool isNew = await DatabaseHelper.instance.addUnlockedQuote(
+        promotionPath.last.id,
+      );
+      await DatabaseHelper.instance.addGachaPull(
+        promotionPath.last.id,
+        promotionPath.last.rarity.id,
+      );
+
+      setState(() {
+        _userUltraRareTickets -= 1;
+        _gachaPoints += 1;
+      });
+
+      final itemWithStatus = GachaItemWithNewStatus(
+        promotionPath: promotionPath,
+        isNew: isNew,
+      );
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => GachaSequenceController(
+            itemsWithStatus: [itemWithStatus],
+            config: config,
+          ),
+        ),
+      );
+    } catch (e) {
+      _showErrorDialog(e.toString());
+    } finally {
+      if (mounted) {
+        setState(() => _isPulling = false);
+      }
+    }
   }
 
   void _showErrorDialog(String message) {
@@ -282,10 +389,14 @@ class _GachaScreenState extends State<GachaScreen> {
     );
   }
 
-  Future<void> _showGachaProbabilities(BuildContext context, GachaConfig config) async {
+  Future<void> _showGachaProbabilities(
+    BuildContext context,
+    GachaConfig config,
+  ) async {
     try {
       // Sort rarities by order for display
-      final sortedRarities = List.from(config.rarities)..sort((a, b) => b.order.compareTo(a.order));
+      final sortedRarities = List.from(config.rarities)
+        ..sort((a, b) => b.order.compareTo(a.order));
 
       await showDialog(
         context: context,
@@ -297,7 +408,8 @@ class _GachaScreenState extends State<GachaScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: sortedRarities.map((rarity) {
-                  final probabilityPercent = (rarity.probability * 100).toStringAsFixed(2);
+                  final probabilityPercent = (rarity.probability * 100)
+                      .toStringAsFixed(2);
                   return ListTile(
                     leading: Icon(Icons.circle, color: rarity.color, size: 16),
                     title: Text(rarity.name),
@@ -316,9 +428,9 @@ class _GachaScreenState extends State<GachaScreen> {
         },
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('確率の読み込みに失敗しました: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('確率の読み込みに失敗しました: $e')));
     }
   }
 
@@ -360,16 +472,30 @@ class _GachaScreenState extends State<GachaScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.monetization_on, color: Colors.amber, size: 24),
+                          const Icon(
+                            Icons.monetization_on,
+                            color: Colors.amber,
+                            size: 24,
+                          ),
                           const SizedBox(width: 8),
-                          Text('$_userCoins C', style: Theme.of(context).textTheme.titleLarge),
+                          Text(
+                            '$_userCoins C',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
                         ],
                       ),
                       Row(
                         children: [
-                          const Icon(Icons.star, color: Colors.pinkAccent, size: 24),
+                          const Icon(
+                            Icons.star,
+                            color: Colors.pinkAccent,
+                            size: 24,
+                          ),
                           const SizedBox(width: 8),
-                          Text('$_gachaPoints P', style: Theme.of(context).textTheme.titleLarge),
+                          Text(
+                            '$_gachaPoints P',
+                            style: Theme.of(context).textTheme.titleLarge,
+                          ),
                         ],
                       ),
                     ],
@@ -391,7 +517,9 @@ class _GachaScreenState extends State<GachaScreen> {
                       label: const Text('ガチャ履歴'),
                       onPressed: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const GachaHistoryScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const GachaHistoryScreen(),
+                          ),
                         );
                       },
                     ),
@@ -413,7 +541,9 @@ class _GachaScreenState extends State<GachaScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton(
-                onPressed: _isPulling ? null : () => _pullMultiGacha(config, items),
+                onPressed: _isPulling
+                    ? null
+                    : () => _pullMultiGacha(config, items),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 20),
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -421,15 +551,19 @@ class _GachaScreenState extends State<GachaScreen> {
                 ),
                 child: _isPulling
                     ? const CircularProgressIndicator()
-                    : Text('${config.multiPullCount}回引く (${config.multiPullCost} C)'),
+                    : Text(
+                        '${config.multiPullCount}回引く (${config.multiPullCost} C)',
+                      ),
               ),
-              if (_userUltraRareTickets > 0) ...[ // Conditionally display the button
-                const SizedBox(height: 16), // Add spacing
+              if (_userUltraRareTickets > 0) ...[
+                const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: _isPulling ? null : () => _pullUltraRareGacha(config, items), // onPressed is already null if tickets < 1
+                  onPressed: _isPulling
+                      ? null
+                      : () => _pullUltraRareGacha(config, items),
                   style: ElevatedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 20),
-                    backgroundColor: Colors.yellow, // Distinct color for ticket pull
+                    backgroundColor: Colors.yellow,
                     foregroundColor: Colors.black,
                   ),
                   child: _isPulling

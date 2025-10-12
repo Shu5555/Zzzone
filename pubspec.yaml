@@ -50,7 +50,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   sqflite_common_ffi: ^2.3.3
-  flutter_launcher_icons: ^0.14.4
+  flutter_launcher_icons: ^0.11.0
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -80,6 +80,7 @@ flutter:
     - assets/images/
     - assets/gacha/
     - assets/announcements.json
+    - assets/gacha/three_gacha_scene.html
 
   fonts:
     - family: MPLUSRounded1c

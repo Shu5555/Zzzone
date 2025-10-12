@@ -1,30 +1,29 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../models/gacha_config.dart';
 import '../models/gacha_item.dart';
-import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
+import '../models/gacha_item_with_new_status.dart';
 
 class MultiGachaResultScreen extends StatelessWidget {
-  final List<GachaItemWithNewStatus> itemsWithStatus; // Change this line
+  final List<GachaItemWithNewStatus> itemsWithStatus;
   final GachaConfig config;
 
   const MultiGachaResultScreen({
     super.key,
-    required this.itemsWithStatus, // Change this line
+    required this.itemsWithStatus,
     required this.config,
   });
 
   @override
   Widget build(BuildContext context) {
     final rarityCounts = <String, int>{};
-    for (var itemWithStatus in itemsWithStatus) { // Iterate through itemsWithStatus
-      rarityCounts[itemWithStatus.item.rarityId] = (rarityCounts[itemWithStatus.item.rarityId] ?? 0) + 1;
-    }
-
     int highestOrder = 0;
-    for (var itemWithStatus in itemsWithStatus) { // Iterate through itemsWithStatus
-      final rarity = config.rarities.firstWhere((r) => r.id == itemWithStatus.item.rarityId); // Use itemWithStatus.item
-      if (rarity.name.length > highestOrder) {
-        highestOrder = rarity.name.length;
+
+    for (var itemWithStatus in itemsWithStatus) {
+      final finalItem = itemWithStatus.finalItem;
+      rarityCounts[finalItem.rarityId] = (rarityCounts[finalItem.rarityId] ?? 0) + 1;
+      if (finalItem.rarity.order > highestOrder) {
+        highestOrder = finalItem.rarity.order;
       }
     }
 
@@ -61,11 +60,12 @@ class MultiGachaResultScreen extends StatelessWidget {
               ),
               itemCount: itemsWithStatus.length,
               itemBuilder: (context, index) {
-                final itemWithStatus = itemsWithStatus[index]; // Get GachaItemWithNewStatus
-                final item = itemWithStatus.item; // Get the GachaItem
+                final itemWithStatus = itemsWithStatus[index];
+                final item = itemWithStatus.finalItem;
                 final rarity = item.rarity;
-                final bool isNew = itemWithStatus.isNew; // Get the isNew status
-                final isHighest = rarity.name.length == highestOrder;
+                final bool isNew = itemWithStatus.isNew;
+                final bool didPromote = itemWithStatus.didPromote;
+                final isHighest = rarity.order == highestOrder;
 
                 return Card(
                   color: rarity.color.withOpacity(0.2),
@@ -74,7 +74,8 @@ class MultiGachaResultScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                     side: isHighest ? BorderSide(color: rarity.color, width: 2) : BorderSide.none,
                   ),
-                  child: Stack( // "NEW!" を重ねるために Stack を使用
+                  clipBehavior: Clip.antiAlias, // To make banners clip correctly
+                  child: Stack(
                     children: [
                       Padding(
                         padding: const EdgeInsets.all(8.0),
@@ -110,29 +111,8 @@ class MultiGachaResultScreen extends StatelessWidget {
                           ],
                         ),
                       ),
-                      if (isNew) // "NEW!" を条件付きで表示
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.only(
-                                topRight: Radius.circular(12),
-                                bottomLeft: Radius.circular(8),
-                              ),
-                            ),
-                            child: const Text(
-                              'NEW!',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
+                      if (isNew)
+                        _Banner(text: 'NEW!', color: Colors.redAccent),
                     ],
                   ),
                 );
@@ -155,4 +135,62 @@ class MultiGachaResultScreen extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Banner extends StatelessWidget {
+  final String text;
+  final Color color;
+  final Alignment alignment;
+
+  const _Banner({
+    required this.text,
+    required this.color,
+    this.alignment = Alignment.topRight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Align(
+        alignment: alignment,
+        child: ClipPath(
+          clipper: _BannerClipper(),
+          child: Container(
+            width: 45, // Increased size
+            height: 45, // Increased size
+            color: color,
+            child: Center(
+              child: Transform.rotate(
+                angle: alignment == Alignment.topLeft ? -math.pi / 4 : math.pi / 4,
+                origin: const Offset(10, 10), // Adjust origin
+                child: Text(
+                  text,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9, // Smaller font
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BannerClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    path.lineTo(size.width, 0);
+    path.lineTo(size.width, size.height);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
