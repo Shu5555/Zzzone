@@ -10,6 +10,7 @@ import '../gacha/models/gacha_rarity.dart';
 import '../gacha/services/gacha_data_loader.dart';
 import '../services/database_helper.dart';
 import '../services/supabase_ranking_service.dart';
+import '../utils/string_converter.dart';
 
 class QuoteListScreen extends StatefulWidget {
   const QuoteListScreen({super.key});
@@ -24,15 +25,33 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
 
   String? _userId;
   String? _favoriteQuoteId;
-  
+
   // State for grouped quotes
   List<GachaRarity> _sortedRarities = [];
   Map<String, List<GachaItem>> _groupedQuotes = {};
+
+  // Search state
+  bool _isSearching = false;
+  String _searchQuery = '';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _initFuture = _loadData();
+    _searchController.addListener(() {
+      if (mounted) {
+        setState(() {
+          _searchQuery = _searchController.text;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -111,14 +130,59 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
     }
   }
 
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: const Text('名言一覧'),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.search),
+          onPressed: () {
+            setState(() {
+              _isSearching = true;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  AppBar _buildSearchAppBar() {
+    return AppBar(
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () {
+          setState(() {
+            _isSearching = false;
+            _searchQuery = '';
+            _searchController.clear();
+          });
+        },
+      ),
+      title: TextField(
+        controller: _searchController,
+        autofocus: true,
+        decoration: const InputDecoration(
+          hintText: '名言や著者名で検索...',
+          border: InputBorder.none,
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.clear),
+          onPressed: () {
+            _searchController.clear();
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isRandomMode = _favoriteQuoteId == 'random';
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('名言一覧'),
-      ),
+      appBar: _isSearching ? _buildSearchAppBar() : _buildAppBar(),
       body: FutureBuilder<void>(
         future: _initFuture,
         builder: (context, snapshot) {
@@ -132,14 +196,40 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
             return const Center(child: Text('ガチャで名言を獲得できます'));
           }
 
+          // Create a temporary map to hold filtered results
+          final filteredGroupedQuotes = <String, List<GachaItem>>{};
+          int totalFilteredQuotes = 0;
+
+          for (var rarity in _sortedRarities) {
+            final quotesInRarity = (_groupedQuotes[rarity.id] ?? []).where((quote) {
+              if (_searchQuery.isEmpty) return true;
+
+              final hiraganaQuery = StringConverter.katakanaToHiragana(_searchQuery.toLowerCase());
+
+              final hiraganaText = StringConverter.katakanaToHiragana(quote.text?.toLowerCase() ?? '');
+              final hiraganaAuthor = StringConverter.katakanaToHiragana(quote.author?.toLowerCase() ?? '');
+
+              return hiraganaText.contains(hiraganaQuery) || hiraganaAuthor.contains(hiraganaQuery);
+            }).toList();
+
+            if (quotesInRarity.isNotEmpty) {
+              filteredGroupedQuotes[rarity.id] = quotesInRarity;
+              totalFilteredQuotes += quotesInRarity.length;
+            }
+          }
+
+          if (totalFilteredQuotes == 0 && _searchQuery.isNotEmpty) {
+            return const Center(child: Text('検索結果が見つかりません'));
+          }
+
           return ListView.builder(
             itemCount: _sortedRarities.length,
             itemBuilder: (context, index) {
               final rarity = _sortedRarities[index];
-              final quotesInRarity = _groupedQuotes[rarity.id] ?? [];
+              final quotesInRarity = filteredGroupedQuotes[rarity.id] ?? [];
 
               if (quotesInRarity.isEmpty) {
-                return const SizedBox.shrink(); // Hide rarity section if no quotes are owned
+                return const SizedBox.shrink(); // Hide rarity section if no quotes match
               }
 
               return Card(
@@ -148,30 +238,27 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
                   leading: Icon(Icons.label, color: rarity.color),
                   title: Text(rarity.name, style: TextStyle(color: rarity.color, fontWeight: FontWeight.bold)),
                   initiallyExpanded: true,
-                  children: quotesInRarity.map((quote) {
-                    final isFavorite = quote.id == _favoriteQuoteId;
-                    return Column(
-                      children: [
-                        ListTile(
-                          title: Text('"${quote.text}"'),
-                          subtitle: Text('- ${quote.author}'),
-                          trailing: _favoriteQuoteId == 'random'
-                              ? null
-                              : Icon(isFavorite ? Icons.star : Icons.star_border, color: isFavorite ? Colors.amber : null),
-                          onTap: _favoriteQuoteId == 'random' ? null : () => _setFavoriteQuote(quote.id),
-                          onLongPress: () {
-                            final textToCopy = '"${quote.text}" - ${quote.author}';
-                            Clipboard.setData(ClipboardData(text: textToCopy));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('名言をコピーしました')),
-                            );
-                          },
-                        ),
-                        if (index < quotesInRarity.length - 1)
-                          const Divider(height: 1, indent: 16, endIndent: 16),
-                      ],
-                    );
-                  }).toList(),
+                  children: ListTile.divideTiles(
+                    context: context,
+                    tiles: quotesInRarity.map((quote) {
+                      final isFavorite = quote.id == _favoriteQuoteId;
+                      return ListTile(
+                        title: Text('"${quote.text}"'),
+                        subtitle: Text('- ${quote.author}'),
+                        trailing: _favoriteQuoteId == 'random'
+                            ? null
+                            : Icon(isFavorite ? Icons.star : Icons.star_border, color: isFavorite ? Colors.amber : null),
+                        onTap: _favoriteQuoteId == 'random' ? null : () => _setFavoriteQuote(quote.id),
+                        onLongPress: () {
+                          final textToCopy = '"${quote.text}" - ${quote.author}';
+                          Clipboard.setData(ClipboardData(text: textToCopy));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('名言をコピーしました')),
+                          );
+                        },
+                      );
+                    }),
+                  ).toList(),
                 ),
               );
             },
