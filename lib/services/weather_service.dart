@@ -1,14 +1,17 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/weather.dart';
 import '../models/weather_info.dart';
 
 class WeatherService {
-  final String? _apiKey = dotenv.env['OPENWEATHERMAP_API_KEY'];
+  static final String _apiKey = kDebugMode
+      ? dotenv.env['OPENWEATHERMAP_API_KEY']!
+      : const String.fromEnvironment('OPENWEATHERMAP_API_KEY');
 
   Future<WeatherInfo> getWeather(String cityName) async {
-    if (_apiKey == null || _apiKey!.isEmpty) {
+    if (_apiKey.isEmpty) {
       throw Exception('OpenWeatherMap APIキーが設定されていません。');
     }
 

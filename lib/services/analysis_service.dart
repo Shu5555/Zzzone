@@ -1,12 +1,15 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 import '../models/sleep_record.dart';
 
 class AnalysisService {
-  static final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
-  static const String _apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+  static final String _apiKey = kDebugMode
+      ? dotenv.env['GEMINI_API_KEY']!
+      : const String.fromEnvironment('GEMINI_API_KEY');
+  static const String _apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
   // LLMの応答は時間がかかる可能性があるため、タイムアウトを60秒に設定
   final _timeoutDuration = const Duration(seconds: 60);
@@ -59,7 +62,7 @@ $dataText
       final prompt = _createPrompt(records);
 
       final response = await http.post(
-        Uri.parse(_apiUrl),
+        Uri.parse(_apiEndpoint),
         headers: {
           'Content-Type': 'application/json',
           'X-goog-api-key': _apiKey,

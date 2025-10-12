@@ -26,14 +26,14 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
-      - name: Create .env file for API Keys
-        run: |
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
-          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
 
       - name: Build Flutter Web
-        run: flutter build web --release --base-href /Zzzone/ # リポジトリ名に合わせて変更
+        run: |
+          flutter build web --release --base-href /Zzzone/ \
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
+            --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
+            --dart-define=OPENWEATHERMAP_API_KEY=${{ secrets.OPENWEATHERMAP_API_KEY }}
 
       - name: Copy index.html to 404.html for SPA routing
         run: cp build/web/index.html build/web/404.html
