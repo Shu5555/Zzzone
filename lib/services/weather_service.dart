@@ -15,9 +15,15 @@ class WeatherService {
       throw Exception('OpenWeatherMap APIキーが設定されていません。');
     }
 
-    // Step 1: Geocoding
-    final geoUri = Uri.parse(
-      'http://api.openweathermap.org/geo/1.0/direct?q=$cityName,JP&limit=1&appid=$_apiKey'
+    // Step 1: Geocoding - Convert city name to coordinates and get location details
+    final geoUri = Uri.https(
+      'api.openweathermap.org',
+      '/geo/1.0/direct',
+      {
+        'q': '$cityName,JP',
+        'limit': '1',
+        'appid': _apiKey,
+      },
     );
     final geoResponse = await http.get(geoUri);
     if (geoResponse.statusCode != 200) {
@@ -34,9 +40,17 @@ class WeatherService {
     final String prefectureName = locationData['state'] ?? '';
     final String resolvedCityName = locationData['local_names']?['ja'] ?? locationData['name'] ?? cityName;
 
-    // Step 2: Get 5 day / 3 hour forecast
-    final forecastUri = Uri.parse(
-      'https://api.openweathermap.org/data/2.5/forecast?lat=$lat&lon=$lon&appid=$_apiKey&units=metric&lang=ja'
+    // Step 2: Get Weather - Use coordinates to get weather data
+    final weatherUri = Uri.https(
+      'api.openweathermap.org',
+      '/data/2.5/forecast',
+      {
+        'lat': lat.toString(),
+        'lon': lon.toString(),
+        'appid': _apiKey,
+        'units': 'metric',
+        'lang': 'ja',
+      },
     );
 
     final forecastResponse = await http.get(forecastUri);
