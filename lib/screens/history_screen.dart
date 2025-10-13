@@ -59,7 +59,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             WeeklyHistoryView(key: _weeklyViewKey),
             MonthlyHistoryView(key: _monthlyViewKey),
-            const AnalysisReportView(),
+            const AnalysisReportScreen(),
           ],
         ),
       ),
@@ -658,24 +658,5 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
         ],
       );
     });
-  }
-}
-
-// --- 分析レポートウィジェット ---
-class AnalysisReportView extends StatelessWidget {
-  const AnalysisReportView({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => AnalysisReportScreen()),
-          );
-        },
-        child: const Text('詳細な分析レポートを見る'),
-      ),
-    );
   }
 }
