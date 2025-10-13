@@ -6,9 +6,7 @@ import '../models/weather.dart';
 import '../models/weather_info.dart';
 
 class WeatherService {
-  static final String _apiKey = kDebugMode
-      ? dotenv.env['OPENWEATHERMAP_API_KEY']!
-      : const String.fromEnvironment('OPENWEATHERMAP_API_KEY');
+  static final String _apiKey = const String.fromEnvironment('OPENWEATHERMAP_API_KEY');
 
   Future<WeatherInfo> getWeather(String cityName) async {
     if (_apiKey.isEmpty) {

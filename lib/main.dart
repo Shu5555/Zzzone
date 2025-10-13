@@ -17,14 +17,9 @@ Future<void> _runDataMigration() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  if (kDebugMode) {
-    await dotenv.load(fileName: ".env");
-  }
-  await initializeDateFormatting('ja_JP');
-
   await Supabase.initialize(
-    url: kDebugMode ? dotenv.env['SUPABASE_URL']! : const String.fromEnvironment('SUPABASE_URL'),
-    anonKey: kDebugMode ? dotenv.env['SUPABASE_ANON_KEY']! : const String.fromEnvironment('SUPABASE_ANON_KEY'),
+    url: const String.fromEnvironment('SUPABASE_URL'),
+    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
   );
 
   if (!kIsWeb) {

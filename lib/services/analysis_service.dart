@@ -6,9 +6,7 @@ import 'package:http/http.dart' as http;
 import '../models/sleep_record.dart';
 
 class AnalysisService {
-  static final String _apiKey = kDebugMode
-      ? dotenv.env['GEMINI_API_KEY']!
-      : const String.fromEnvironment('GEMINI_API_KEY');
+  static final String _apiKey = const String.fromEnvironment('GEMINI_API_KEY');
   static const String _apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
   // LLMの応答は時間がかかる可能性があるため、タイムアウトを60秒に設定

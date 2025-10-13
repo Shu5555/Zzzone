@@ -11,7 +11,7 @@ import '../services/gacha_data_loader.dart';
 import 'gacha_animation_screen.dart';
 import 'gacha_history_screen.dart';
 import 'multi_gacha_animation_screen.dart';
-import 'gacha_sequence_controller.dart';
+import 'gacha_orchestrator_screen.dart';
 import '../models/gacha_item_with_new_status.dart'; // Import GachaItemWithNewStatus
 
 class GachaScreen extends StatefulWidget {
@@ -122,25 +122,18 @@ class _GachaScreenState extends State<GachaScreen> {
       String? nextRarityId;
       double promotionChance = 0.0;
 
-      // DEBUG: Temporarily increased promotion rates
+      // Promotion logic based on rarity
       switch (currentItem.rarity.id) {
-        case 'common':
-          promotionChance = 0.5; // 50%
-          nextRarityId = 'rare';
-          break;
-        case 'rare':
-          promotionChance = 0.5; // 50%
-          nextRarityId = 'super_rare';
-          break;
         case 'super_rare':
-          promotionChance = 0.5; // 50%
+          promotionChance = 0.05; // 5%
           nextRarityId = 'ultra_rare';
           break;
         case 'ultra_rare':
-          promotionChance = 0.5; // 50%
+          promotionChance = 0.01; // 1%
           nextRarityId = 'own_chin';
           break;
         default:
+          // No promotion for other rarities
           return promotionPath;
       }
 
@@ -206,7 +199,7 @@ class _GachaScreenState extends State<GachaScreen> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => GachaSequenceController(
+          builder: (_) => GachaOrchestratorScreen(
             itemsWithStatus: [itemWithStatus],
             config: config,
           ),
@@ -276,7 +269,7 @@ class _GachaScreenState extends State<GachaScreen> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => GachaSequenceController(
+          builder: (_) => GachaOrchestratorScreen(
             itemsWithStatus: pulledItemsWithStatus,
             config: config,
           ),
@@ -359,7 +352,7 @@ class _GachaScreenState extends State<GachaScreen> {
 
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => GachaSequenceController(
+          builder: (_) => GachaOrchestratorScreen(
             itemsWithStatus: [itemWithStatus],
             config: config,
           ),
