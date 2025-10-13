@@ -274,14 +274,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _navigateTo(Widget screen) async {
-    if (screen is AnnouncementsScreen) {
-      await _announcementService.updateLastCheckedAt();
-      if (mounted) {
-        setState(() {
-          _hasUnreadAnnouncements = false;
-        });
-      }
-    }
 
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),

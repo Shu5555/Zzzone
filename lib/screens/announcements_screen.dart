@@ -18,7 +18,15 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
   @override
   void initState() {
     super.initState();
-    _announcementsFuture = _announcementService.loadAnnouncements();
+    _announcementsFuture = _loadAndMarkAsRead();
+  }
+
+  Future<List<Announcement>> _loadAndMarkAsRead() async {
+    final announcements = await _announcementService.loadAnnouncements();
+    // This is a fire-and-forget call. We don't need to wait for it to finish
+    // as the UI doesn't depend on its completion.
+    _announcementService.markAnnouncementsAsRead(announcements);
+    return announcements;
   }
 
   @override

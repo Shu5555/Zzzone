@@ -28,8 +28,7 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    // DBバージョンを4に更新
-    return await openDatabase(path, version: 4, onCreate: _createDB, onUpgrade: _onUpgrade);
+    return await openDatabase(path, version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
@@ -70,13 +69,24 @@ CREATE TABLE gacha_pull_history (
   pulled_at TEXT NOT NULL
 )
 ''');
+
+    // read_announcements table
+    await _createReadAnnouncementsTable(db);
+  }
+
+  Future<void> _createReadAnnouncementsTable(Database db) async {
+    await db.execute('''
+CREATE TABLE read_announcements (
+  id TEXT PRIMARY KEY
+)
+''');
   }
 
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
       await db.execute('ALTER TABLE sleep_records RENAME TO sleep_records_v1');
       await _createDB(db, newVersion);
-      return; // createDB handles all tables, so we can return here.
+      return;
     }
     if (oldVersion < 3) {
       await db.execute('''
@@ -96,6 +106,9 @@ CREATE TABLE gacha_pull_history (
   pulled_at TEXT NOT NULL
 )
 ''');
+    }
+    if (oldVersion < 5) {
+      await _createReadAnnouncementsTable(db);
     }
   }
 
@@ -200,7 +213,6 @@ CREATE TABLE gacha_pull_history (
   Future<bool> addUnlockedQuote(String quoteId) async {
     final db = await instance.database;
 
-    // Check if the quote already exists
     final existingQuotes = await db.query(
       'unlocked_quotes',
       where: 'quote_id = ?',
@@ -209,17 +221,15 @@ CREATE TABLE gacha_pull_history (
     );
 
     if (existingQuotes.isNotEmpty) {
-      // Quote already exists
       return false;
     } else {
-      // Quote does not exist, insert it
       await db.insert(
         'unlocked_quotes',
         {
           'quote_id': quoteId,
           'unlocked_at': DateTime.now().toIso8601String(),
         },
-        conflictAlgorithm: ConflictAlgorithm.replace, // Use replace or just omit, as we've checked
+        conflictAlgorithm: ConflictAlgorithm.replace,
       );
       return true;
     }
@@ -248,6 +258,23 @@ CREATE TABLE gacha_pull_history (
       rarityId: row['rarity_id'] as String,
       pulledAt: DateTime.parse(row['pulled_at'] as String),
     )).toList();
+  }
+
+  // --- Announcement Methods ---
+
+  Future<void> markAnnouncementsAsRead(List<String> announcementIds) async {
+    final db = await instance.database;
+    final batch = db.batch();
+    for (final id in announcementIds) {
+      batch.insert('read_announcements', {'id': id}, conflictAlgorithm: ConflictAlgorithm.ignore);
+    }
+    await batch.commit(noResult: true);
+  }
+
+  Future<Set<String>> getReadAnnouncementIds() async {
+    final db = await instance.database;
+    final result = await db.query('read_announcements', columns: ['id']);
+    return result.map((row) => row['id'] as String).toSet();
   }
 
   Future close() async {

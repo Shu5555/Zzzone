@@ -21,6 +21,7 @@ class DatabaseHelper {
   final List<SleepRecord> _inMemoryDb = [];
   final List<String> _unlockedQuotes = [];
   final List<Map<String, String>> _gachaHistory = [];
+  final Set<String> _readAnnouncements = {}; // New
   bool _isInitialized = false;
 
   // SharedPreferences keys
@@ -28,6 +29,7 @@ class DatabaseHelper {
   static const _kSleepRecordsKeyV1 = 'sleep_records_json';
   static const _kUnlockedQuotesKey = 'unlocked_quotes_json';
   static const _kGachaHistoryKey = 'gacha_history_json';
+  static const _kReadAnnouncementsKey = 'read_announcements_json'; // New
 
   Future<dynamic> get database async {
     await _ensureInitialized();
@@ -42,6 +44,7 @@ class DatabaseHelper {
     _loadSleepRecords(prefs);
     _loadUnlockedQuotes(prefs);
     _loadGachaHistory(prefs);
+    _loadReadAnnouncements(prefs); // New
 
     _isInitialized = true;
   }
@@ -108,6 +111,17 @@ class DatabaseHelper {
     }
   }
 
+  void _loadReadAnnouncements(SharedPreferences prefs) {
+    final jsonString = prefs.getString(_kReadAnnouncementsKey);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> jsonList = jsonDecode(jsonString);
+        _readAnnouncements.clear();
+        _readAnnouncements.addAll(jsonList.cast<String>());
+      } catch (e) { /* Handle error */ }
+    }
+  }
+
   Future<void> _persistSleepRecords() async {
     final prefs = await SharedPreferences.getInstance();
     final List<Map<String, dynamic>> jsonList = _inMemoryDb.map((r) => r.toMap()).toList();
@@ -122,6 +136,11 @@ class DatabaseHelper {
   Future<void> _persistGachaHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kGachaHistoryKey, jsonEncode(_gachaHistory));
+  }
+
+  Future<void> _persistReadAnnouncements() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kReadAnnouncementsKey, jsonEncode(_readAnnouncements.toList()));
   }
 
   // --- SleepRecord Methods ---
@@ -246,6 +265,19 @@ class DatabaseHelper {
       rarityId: row['rarity_id']!,
       pulledAt: DateTime.parse(row['pulled_at']!),
     )).toList();
+  }
+
+  // --- Announcement Methods ---
+
+  Future<void> markAnnouncementsAsRead(List<String> announcementIds) async {
+    await _ensureInitialized();
+    _readAnnouncements.addAll(announcementIds);
+    await _persistReadAnnouncements();
+  }
+
+  Future<Set<String>> getReadAnnouncementIds() async {
+    await _ensureInitialized();
+    return _readAnnouncements;
   }
 
   Future close() async {

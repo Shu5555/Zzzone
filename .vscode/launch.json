@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Zzzone",
+            "request": "launch",
+            "type": "dart",
+            "toolArgs": [
+                "--dart-define=GEMINI_API_KEY=AIzaSyDLlZP3_4cZPfGw9sNsEgG0-7G6VLuwLwU",
+                "--dart-define=SUPABASE_URL=https://jmnkcckicwsdffivxwav.supabase.co",
+                "--dart-define=SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImptbmtjY2tpY3dzZGZmaXZ4d2F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxNTE1NTQsImV4cCI6MjA3NDcyNzU1NH0.5k-y2AECnjRrkXVYx2QQRA9AS_hkhdNsdrzBnmU1I_U",
+                "--dart-define=OPENWEATHERMAP_API_KEY=fe678e239254356ea4e04cda501320fe"
+            ]
+        }
+    ]
+}

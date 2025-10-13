@@ -20,14 +20,13 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   late TabController _tabController;
 
   int _userCoins = 0;
-  int _userGachaPoints = 0; // New state variable
-  int _userUltraRareTickets = 0; // New state variable
+  int _userGachaPoints = 0;
+  int _userUltraRareTickets = 0;
 
   @override
   void initState() {
     super.initState();
-    // Change length to 3 for three tabs
-    _tabController = TabController(length: 3, vsync: this); // Changed from 2 to 3
+    _tabController = TabController(length: 3, vsync: this);
     _shopDataFuture = _loadShopData();
   }
 
@@ -37,43 +36,33 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  // This method now primarily serves the Background Shop tab.
-  // The Gacha tab will manage its own state.
   Future<Map<String, dynamic>> _loadShopData() async {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('userId');
 
-    // WebではuserIdがなくてもエラーにしない
-    if (_userId == null && !kIsWeb) {
-      throw Exception('ランキングに参加してユーザーIDを有効にしてください。');
-    }
-
-    List<String> unlockedItems = [];
-    if (kIsWeb) {
-      // Web: SharedPreferencesからデータを読み込む
-      if (mounted) {
-        setState(() {
-          _userCoins = prefs.getInt('sleep_coins') ?? 0;
-          _userGachaPoints = prefs.getInt('gacha_points') ?? 0;
-          _userUltraRareTickets = prefs.getInt('ultra_rare_tickets') ?? 0;
-        });
-      }
-      unlockedItems = prefs.getStringList('unlocked_backgrounds') ?? [];
-    } else {
-      // Mobile: Supabaseからデータを読み込む
-      if (_userId == null) {
+    if (_userId == null) {
+      if (!kIsWeb) {
         throw Exception('ランキングに参加してユーザーIDを有効にしてください。');
       }
-      final userProfile = await _supabaseService.getUser(_userId!);
-      unlockedItems = await _supabaseService.getUnlockedBackgrounds(_userId!);
-      
       if (mounted) {
         setState(() {
-          _userCoins = userProfile?['sleep_coins'] ?? 0;
-          _userGachaPoints = userProfile?['gacha_points'] ?? 0;
-          _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0;
+          _userCoins = 0;
+          _userGachaPoints = 0;
+          _userUltraRareTickets = 0;
         });
       }
+      return {'unlocked': <String>[]};
+    }
+
+    final userProfile = await _supabaseService.getUser(_userId!);
+    final unlockedItems = await _supabaseService.getUnlockedBackgrounds(_userId!);
+    
+    if (mounted) {
+      setState(() {
+        _userCoins = userProfile?['sleep_coins'] ?? 0;
+        _userGachaPoints = userProfile?['gacha_points'] ?? 0;
+        _userUltraRareTickets = userProfile?['ultra_rare_tickets'] ?? 0;
+      });
     }
     
     return {
@@ -82,7 +71,12 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _executePurchase(ShopItem item) async {
-    if (_userId == null) return;
+    if (_userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ユーザー情報が見つかりません。'), backgroundColor: Colors.red),
+        );
+        return;
+    }
 
     if (_userCoins < item.cost) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -94,10 +88,8 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     try {
       await _supabaseService.purchaseBackground(userId: _userId!, backgroundId: item.id, cost: item.cost);
       
-      // Manually update coin count after purchase
       setState(() {
         _userCoins -= item.cost;
-        // Refresh background shop data
         _shopDataFuture = _loadShopData();
       });
 
@@ -142,7 +134,12 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   }
 
   Future<void> _executeTicketPurchase({required String ticketId, required int cost}) async {
-    if (_userId == null && !kIsWeb) return;
+    if (_userId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ユーザー情報が見つかりません。'), backgroundColor: Colors.red),
+        );
+        return;
+    }
 
     if (_userGachaPoints < cost) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,19 +149,11 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
     }
 
     try {
-      if (kIsWeb) {
-        // Web: SharedPreferencesを更新
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('gacha_points', _userGachaPoints - cost);
-        await prefs.setInt('ultra_rare_tickets', _userUltraRareTickets + 1);
-      } else {
-        // Mobile: Supabaseを更新
-        await _supabaseService.purchaseGachaTicket(userId: _userId!, cost: cost, ticketType: ticketId);
-      }
+      await _supabaseService.purchaseGachaTicket(userId: _userId!, cost: cost, ticketType: ticketId);
       
       setState(() {
         _userGachaPoints -= cost;
-        _userUltraRareTickets += 1; // Assuming only one type of ticket for now
+        _userUltraRareTickets += 1;
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,7 +209,6 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
               label: Text('$_userCoins C'),
             ),
           ),
-          // Display Gacha Points
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: Chip(
@@ -234,25 +222,21 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
           tabs: const [
             Tab(text: '背景色'),
             Tab(text: 'ガチャ'),
-            Tab(text: 'ポイント'), // New tab
+            Tab(text: 'ポイント'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Tab 1: Background Shop
           _buildBackgroundShop(),
-          // Tab 2: Gacha
           const GachaScreen(),
-          // Tab 3: Gacha Points Shop
-          _buildGachaPointShop(), // New method
+          _buildGachaPointShop(),
         ],
       ),
     );
   }
 
-  // Extracted the background shop UI into its own method for clarity
   Widget _buildBackgroundShop() {
     return FutureBuilder<Map<String, dynamic>>(
       future: _shopDataFuture,
@@ -328,7 +312,7 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildGachaPointShop() {
-    const ticketCost = 100; // Changed from 500 to 100
+    const ticketCost = 100;
     const ticketId = 'ultra_rare_guaranteed_ticket';
     const ticketName = '超激レア確定ガチャチケット';
 
@@ -343,9 +327,9 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
             child: Column(
               children: [
                 ListTile(
-                  leading: const Icon(Icons.confirmation_number, size: 40, color: Colors.yellow), // Changed color
+                  leading: const Icon(Icons.confirmation_number, size: 40, color: Colors.yellow),
                   title: const Text(ticketName, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  subtitle: Text('$ticketCost P で購入'), // Cost display
+                  subtitle: Text('$ticketCost P で購入'),
                   trailing: Text('所持数: $_userUltraRareTickets'),
                 ),
                 Padding(
