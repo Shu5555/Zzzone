@@ -48,7 +48,7 @@ class SupabaseRankingService {
     try {
       final response = await _supabase
           .from('users')
-          .select('*, favorite_quote_id, ultra_rare_tickets') // Add ultra_rare_tickets
+          .select('*, favorite_quote_id, ultra_rare_tickets, ai_tone, ai_gender_preference') // Add ai_gender_preference
           .eq('id', userId)
           .single();
       return response;
@@ -103,6 +103,14 @@ class SupabaseRankingService {
       }
       rethrow;
     }
+  }
+
+  Future<void> updateUserAiTone({required String userId, required String aiTone}) async {
+    await _supabase.from('users').update({'ai_tone': aiTone}).eq('id', userId);
+  }
+
+  Future<void> updateUserAiGender({required String userId, required String aiGender}) async {
+    await _supabase.from('users').update({'ai_gender_preference': aiGender}).eq('id', userId);
   }
 
   Future<void> deleteUser(String userId) async {

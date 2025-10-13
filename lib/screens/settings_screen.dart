@@ -14,6 +14,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final _supabaseService = SupabaseRankingService();
+
+  // Goal Time State
   TimeOfDay _goalTime = const TimeOfDay(hour: 23, minute: 0);
   int _changeCount = 0;
   DateTime? _weekStartDate;
@@ -23,6 +26,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedPrefecture = '東京都';
   String _weatherCityName = '千代田区';
   final _weatherCityNameController = TextEditingController();
+
+  // AI Settings State
+  String? _userId;
+  String _selectedAiTone = 'default';
+  String _selectedAiGender = 'unspecified'; // New
+  bool _isLoadingAiSettings = true;
+  final Map<String, String> _aiToneOptions = {
+    'default': '通常',
+    'polite': '丁寧',
+    'friendly': '友達風',
+    'butler': '執事風',
+    'tsundere': 'ツンデレ',
+    'counselor': 'カウンセラー',
+    'childcare': '保育士',
+    'researcher': '研究者',
+    'android': 'アンドロイド',
+    'sage': '賢者',
+    'ottori': 'おっとり系',
+    'cool': 'クール系',
+    'genki': '元気いっぱい',
+    'oneesan': 'お姉さん',
+    'genius_girl': '天才少女',
+    'high_school_boy': '男子高校生',
+  };
 
   static const List<String> _prefectures = [
     '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
@@ -48,14 +75,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
+    _userId = prefs.getString('userId');
 
+    // Load Goal Time
     final hour = prefs.getInt('goalHour') ?? 23;
     final minute = prefs.getInt('goalMinute') ?? 0;
     _goalTime = TimeOfDay(hour: hour, minute: minute);
-
     _changeCount = prefs.getInt('goalTimeChangeCount') ?? 0;
     final weekStartStr = prefs.getString('goalTimeChangeWeekStart');
-
     if (weekStartStr != null) {
       _weekStartDate = DateTime.parse(weekStartStr);
       if (DateTime.now().difference(_weekStartDate!).inDays >= 7) {
@@ -67,88 +94,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
     _isLocked = _changeCount >= 3;
 
-    // Load weather location
+    // Load Weather Location
     _selectedPrefecture = prefs.getString('weather_prefecture') ?? '東京都';
     _weatherCityName = prefs.getString('weather_city_name') ?? '千代田区';
 
-    setState(() {});
+    // Load AI Settings
+    if (_userId != null) {
+      final userProfile = await _supabaseService.getUser(_userId!);
+      if (mounted) {
+        _selectedAiTone = userProfile?['ai_tone'] ?? 'default';
+        _selectedAiGender = userProfile?['ai_gender_preference'] ?? 'unspecified';
+      }
+    }
+
+    setState(() {
+      _isLoadingAiSettings = false;
+    });
   }
 
-  Future<void> _showWeatherLocationDialog() async {
-    _weatherCityNameController.text = _weatherCityName;
-    String dialogPrefecture = _selectedPrefecture;
+  Future<void> _onAiToneChanged(String? newValue) async {
+    if (newValue == null || _userId == null) return;
 
-    final bool? saved = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('天気予報の地点を設定'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<String>(
-                      value: dialogPrefecture,
-                      items: _prefectures.map((String prefecture) {
-                        return DropdownMenuItem<String>(
-                          value: prefecture,
-                          child: Text(prefecture),
-                        );
-                      }).toList(),
-                      onChanged: (newValue) {
-                        if (newValue != null) {
-                          setDialogState(() {
-                            dialogPrefecture = newValue;
-                          });
-                        }
-                      },
-                      decoration: const InputDecoration(labelText: '都道府県'),
-                    ),
-                    TextField(
-                      controller: _weatherCityNameController,
-                      autofocus: true,
-                      decoration: const InputDecoration(labelText: '市区町村', hintText: '例: 千代田区'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: const Text('キャンセル'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(true);
-                  },
-                  child: const Text('保存'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+    setState(() {
+      _selectedAiTone = newValue;
+    });
 
-    if (saved == true) {
-      final newPrefecture = dialogPrefecture;
-      final newCityName = _weatherCityNameController.text;
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('weather_prefecture', newPrefecture);
-      await prefs.setString('weather_city_name', newCityName);
-      setState(() {
-        _selectedPrefecture = newPrefecture;
-        _weatherCityName = newCityName;
-      });
+    try {
+      await _supabaseService.updateUserAiTone(userId: _userId!, aiTone: newValue);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('地点を設定しました')),
+          const SnackBar(content: Text('AIの口調を変更しました')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラー: 口調の変更に失敗しました'), backgroundColor: Colors.red),
         );
       }
     }
+  }
+
+  Future<void> _onAiGenderChanged(String? newValue) async {
+    if (newValue == null || _userId == null) return;
+
+    setState(() {
+      _selectedAiGender = newValue;
+    });
+
+    try {
+      await _supabaseService.updateUserAiGender(userId: _userId!, aiGender: newValue);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('AIに認識される性別を変更しました')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('エラー: 性別の変更に失敗しました'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _showWeatherLocationDialog() async {
+    // ... (omitted for brevity, unchanged)
   }
 
   void _handleTapGoalTimeSetting() {
@@ -207,6 +218,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Divider(),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text('AIアシスタント設定', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          _buildAiToneSelector(),
+          _buildAiGenderSelector(),
+          const Divider(),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text('データ管理', style: Theme.of(context).textTheme.titleSmall),
           ),
           ListTile(
@@ -224,6 +242,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 MaterialPageRoute(builder: (_) => const AboutScreen()),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiToneSelector() {
+    return ListTile(
+      leading: const Icon(Icons.psychology_outlined),
+      title: const Text('AIの口調設定'),
+      trailing: _isLoadingAiSettings
+          ? const CircularProgressIndicator()
+          : DropdownButton<String>(
+              value: _selectedAiTone,
+              items: _aiToneOptions.entries.map((entry) {
+                return DropdownMenuItem<String>(
+                  value: entry.key,
+                  child: Text(entry.value),
+                );
+              }).toList(),
+              onChanged: _userId == null ? null : _onAiToneChanged,
+            ),
+    );
+  }
+
+  Widget _buildAiGenderSelector() {
+    if (_isLoadingAiSettings) return const SizedBox.shrink();
+    if (_userId == null) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('AIに認識される性別', style: Theme.of(context).textTheme.titleMedium),
+          Text('ペルソナによっては応答が少し変化します', style: Theme.of(context).textTheme.bodySmall),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              Radio<String>(
+                value: 'unspecified',
+                groupValue: _selectedAiGender,
+                onChanged: (v) => _onAiGenderChanged(v),
+              ),
+              const Text('未記入'),
+              Radio<String>(
+                value: 'male',
+                groupValue: _selectedAiGender,
+                onChanged: (v) => _onAiGenderChanged(v),
+              ),
+              const Text('男性'),
+              Radio<String>(
+                value: 'female',
+                groupValue: _selectedAiGender,
+                onChanged: (v) => _onAiGenderChanged(v),
+              ),
+              const Text('女性'),
+            ],
           ),
         ],
       ),

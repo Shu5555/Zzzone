@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sleep_management_app/services/supabase_ranking_service.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
 import '../services/cache_service.dart';
@@ -19,7 +20,6 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
   ReportState _state = ReportState.loading;
   String _message = '分析データを読み込んでいます...';
   
-  // 分析結果を保持する状態変数
   Map<String, dynamic>? _llmAnalysisResult;
   Map<String, dynamic>? _localAnalysisResult;
 
@@ -30,7 +30,21 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
   }
 
   Future<void> _triggerAnalysisCheck() async {
-    // 1. 記録件数をチェック
+    // 1. Get User Preferences
+    final prefs = await SharedPreferences.getInstance();
+    final userId = prefs.getString('userId');
+    String aiTone = 'default';
+    String aiGender = 'unspecified';
+
+    if (userId != null) {
+      final userProfile = await SupabaseRankingService().getUser(userId);
+      if (userProfile != null) {
+        aiTone = userProfile['ai_tone'] ?? 'default';
+        aiGender = userProfile['ai_gender_preference'] ?? 'unspecified';
+      }
+    }
+
+    // 2. Check record count
     final records = await DatabaseHelper.instance.getLatestRecords(limit: 30);
     if (records.length < 5) {
       if (mounted) setState(() {
@@ -40,24 +54,22 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
       return;
     }
 
-    // 2. ローカルでの数値分析を実行
+    // 3. Perform local analysis
     final localResult = _performLocalAnalysis(records);
 
-    // 3. LLM分析（キャッシュチェックとAPI呼び出し）
+    // 4. LLM Analysis (Cache check & API call)
     final cachedData = await CacheService().loadAnalysis();
     final currentLatestRecordDataId = records.first.dataId;
 
     if (cachedData != null && cachedData.latestRecordId == currentLatestRecordDataId) {
-      // 3a. キャッシュが有効な場合
       if (mounted) setState(() {
         _llmAnalysisResult = cachedData.analysisResult;
         _localAnalysisResult = localResult;
         _state = ReportState.success;
       });
     } else {
-      // 3b. キャッシュがない、またはデータが古い場合：再分析を実行
       try {
-        final newLlmResult = await AnalysisService().fetchSleepAnalysis(records);
+        final newLlmResult = await AnalysisService().fetchSleepAnalysis(records, aiTone, aiGender);
         await CacheService().saveAnalysis(newLlmResult, currentLatestRecordDataId);
         if (mounted) setState(() {
           _llmAnalysisResult = newLlmResult;
@@ -73,7 +85,7 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
     }
   }
 
-  // --- ここから復活させたローカル分析ロジック ---
+  // --- Local Analysis Logic (unchanged) ---
   Map<String, dynamic> _performLocalAnalysis(List<SleepRecord> records) {
     return {
       'bestDuration': _analyzePerformanceVsDuration(records),
@@ -157,7 +169,6 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
       'overslept': avg(records.where((r) => !r.didNotOversleep).toList()),
     };
   }
-  // --- ローカル分析ロジックここまで ---
 
   @override
   Widget build(BuildContext context) {
@@ -173,7 +184,6 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
         return ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
-            // LLM分析結果
             _buildSectionCard(context, title: 'AIによる総評', icon: Icons.comment_rounded, color: Colors.blue, content: Text(_llmAnalysisResult!['overall_comment'] as String? ?? 'コメントはありません。', style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5))),
             const SizedBox(height: 16),
             _buildSectionCard(context, title: 'AIが見つけた良い点', icon: Icons.thumb_up_rounded, color: Colors.green, content: _buildPointList(_llmAnalysisResult!['positive_points'] as List<dynamic>? ?? [])),
@@ -182,7 +192,6 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
             
             const Padding(padding: EdgeInsets.symmetric(vertical: 16.0), child: Divider()),
 
-            // ローカル数値分析結果
             _buildAchievementsCard(_localAnalysisResult!['achievements'] as List<String>),
             const SizedBox(height: 16),
             _buildAnalysisCard(title: 'パフォーマンスが最大化する睡眠時間', result: _localAnalysisResult!['bestDuration']!, icon: Icons.hourglass_bottom_rounded, color: Colors.blue),
@@ -197,7 +206,7 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
     }
   }
 
-  // --- ここから復活させたUI構築ヘルパー ---
+  // --- UI Helper methods (unchanged) ---
   Widget _buildPointList(List<dynamic> points) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: points.map((point) => Padding(padding: const EdgeInsets.only(bottom: 8.0), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('・ ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Expanded(child: Text(point as String, style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4)))]))).toList());
   }
@@ -222,5 +231,4 @@ class _AnalysisReportViewState extends State<AnalysisReportView> {
   Widget _buildAnalysisItem(String label, double score) {
     return Column(children: [Text(label, style: Theme.of(context).textTheme.bodyMedium), Text(score > 0 ? score.toStringAsFixed(1) : '-', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold))]);
   }
-  // --- UI構築ヘルパーここまで ---
 }
