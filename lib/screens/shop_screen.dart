@@ -54,8 +54,13 @@ class _ShopScreenState extends State<ShopScreen> with SingleTickerProviderStateM
       return {'unlocked': <String>[]};
     }
 
-    final userProfile = await _supabaseService.getUser(_userId!);
-    final unlockedItems = await _supabaseService.getUnlockedBackgrounds(_userId!);
+    final results = await Future.wait([
+      _supabaseService.getUser(_userId!),
+      _supabaseService.getUnlockedBackgrounds(_userId!),
+    ]);
+
+    final userProfile = results[0] as Map<String, dynamic>?;
+    final unlockedItems = results[1] as List<String>;
     
     if (mounted) {
       setState(() {

@@ -172,6 +172,37 @@ class DatabaseHelper {
     return sortedList;
   }
 
+  Future<List<SleepRecord>> readRecordsForLastNDays(int days) async {
+    await _ensureInitialized();
+    final today = getLogicalDate(DateTime.now());
+    final records = _inMemoryDb.where((record) {
+      return today.difference(record.recordDate).inDays < days;
+    }).toList();
+
+    records.sort((a, b) {
+      int dateCompare = b.recordDate.compareTo(a.recordDate);
+      if (dateCompare != 0) return dateCompare;
+      return b.wakeUpTime.compareTo(a.wakeUpTime);
+    });
+
+    return records;
+  }
+
+  Future<List<SleepRecord>> readRecordsForMonth(int year, int month) async {
+    await _ensureInitialized();
+    final records = _inMemoryDb.where((record) {
+      return record.recordDate.year == year && record.recordDate.month == month;
+    }).toList();
+
+    records.sort((a, b) {
+      int dateCompare = b.recordDate.compareTo(a.recordDate);
+      if (dateCompare != 0) return dateCompare;
+      return b.wakeUpTime.compareTo(a.wakeUpTime);
+    });
+
+    return records;
+  }
+
   Future<int> update(SleepRecord record) async {
     await _ensureInitialized();
     final index = _inMemoryDb.indexWhere((r) => r.dataId == record.dataId);

@@ -142,6 +142,35 @@ CREATE TABLE gacha_pull_history (
     return result.map((json) => SleepRecord.fromMap(json)).toList();
   }
 
+  Future<List<SleepRecord>> readRecordsForLastNDays(int days) async {
+    final db = await instance.database;
+    final today = getLogicalDate(DateTime.now());
+    final startDate = today.subtract(Duration(days: days - 1));
+    final startDateString = startDate.toIso8601String().substring(0, 10);
+
+    final result = await db.query(
+      'sleep_records',
+      where: 'recordDate >= ?',
+      whereArgs: [startDateString],
+      orderBy: 'recordDate DESC, wakeUpTime DESC',
+    );
+    return result.map((json) => SleepRecord.fromMap(json)).toList();
+  }
+
+  Future<List<SleepRecord>> readRecordsForMonth(int year, int month) async {
+    final db = await instance.database;
+    final monthStr = month.toString().padLeft(2, '0');
+    final yearMonthStr = '$year-$monthStr';
+
+    final result = await db.query(
+      'sleep_records',
+      where: 'recordDate LIKE ?',
+      whereArgs: ['$yearMonthStr%'],
+      orderBy: 'recordDate DESC, wakeUpTime DESC',
+    );
+    return result.map((json) => SleepRecord.fromMap(json)).toList();
+  }
+
   Future<int> update(SleepRecord record) async {
     final db = await instance.database;
     final result = await db.update(

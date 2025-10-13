@@ -80,12 +80,12 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
   @override
   void initState() {
     super.initState();
-    _loadRecords();
+    _recordsFuture = DatabaseHelper.instance.readRecordsForLastNDays(7);
   }
 
   void _loadRecords() {
     setState(() {
-      _recordsFuture = DatabaseHelper.instance.readAllRecords();
+      _recordsFuture = DatabaseHelper.instance.readRecordsForLastNDays(7);
     });
   }
 
@@ -105,9 +105,7 @@ class _WeeklyHistoryViewState extends State<WeeklyHistoryView> {
         if (snapshot.hasError) return Center(child: Text('エラー: ${snapshot.error}'));
         if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('記録なし'));
 
-        final allRecords = snapshot.data!;
-        final today = getLogicalDate(DateTime.now());
-        final recordsForDisplay = allRecords.where((r) => today.difference(r.recordDate).inDays < 7).toList();
+        final recordsForDisplay = snapshot.data!;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -356,18 +354,19 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
   @override
   void initState() {
     super.initState();
-    _loadRecords();
+    _recordsFuture = DatabaseHelper.instance.readRecordsForMonth(_displayMonth.year, _displayMonth.month);
   }
 
   void _loadRecords() {
     setState(() {
-      _recordsFuture = DatabaseHelper.instance.readAllRecords();
+      _recordsFuture = DatabaseHelper.instance.readRecordsForMonth(_displayMonth.year, _displayMonth.month);
     });
   }
 
   void _changeMonth(int month) {
     setState(() {
       _displayMonth = DateTime(_displayMonth.year, _displayMonth.month + month);
+      _recordsFuture = DatabaseHelper.instance.readRecordsForMonth(_displayMonth.year, _displayMonth.month);
     });
   }
 
@@ -387,8 +386,7 @@ class _MonthlyHistoryViewState extends State<MonthlyHistoryView> {
         if (snapshot.hasError) return Center(child: Text('エラー: ${snapshot.error}'));
         if (!snapshot.hasData || snapshot.data!.isEmpty) return const Center(child: Text('記録なし'));
 
-        final allRecords = snapshot.data!;
-        final recordsForDisplay = allRecords.where((r) => r.recordDate.year == _displayMonth.year && r.recordDate.month == _displayMonth.month).toList();
+        final recordsForDisplay = snapshot.data!;
 
         return LayoutBuilder(
           builder: (context, constraints) {
@@ -660,5 +658,24 @@ ${DateFormat('HH:mm').format(record.sleepTime)} - ${DateFormat('HH:mm').format(r
         ],
       );
     });
+  }
+}
+
+// --- 分析レポートウィジェット ---
+class AnalysisReportView extends StatelessWidget {
+  const AnalysisReportView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: ElevatedButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => AnalysisReportScreen()),
+          );
+        },
+        child: const Text('詳細な分析レポートを見る'),
+      ),
+    );
   }
 }

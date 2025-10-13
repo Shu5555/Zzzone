@@ -9,14 +9,14 @@ import '../utils/date_helper.dart';
 
 enum ReportState { loading, success, error, noData }
 
-class AnalysisReportView extends StatefulWidget {
-  const AnalysisReportView({super.key});
+class AnalysisReportScreen extends StatefulWidget {
+  const AnalysisReportScreen({super.key});
 
   @override
-  State<AnalysisReportView> createState() => _AnalysisReportViewState();
+  State<AnalysisReportScreen> createState() => _AnalysisReportViewState();
 }
 
-class _AnalysisReportViewState extends State<AnalysisReportView> {
+class _AnalysisReportViewState extends State<AnalysisReportScreen> {
   ReportState _state = ReportState.loading;
   String _message = '分析データを読み込んでいます...';
   
