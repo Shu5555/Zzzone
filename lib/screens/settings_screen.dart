@@ -156,26 +156,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         final tempCityController = TextEditingController(text: _weatherCityName);
         return AlertDialog(
           title: const Text('天気予報の地点設定'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButton<String>(
-                isExpanded: true,
-                value: tempPrefecture,
-                items: _prefectures.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
-                onChanged: (value) {
-                  if (value != null) {
-                    // This is a bit of a hack to rebuild the dialog state
-                    (context as Element).markNeedsBuild();
-                    tempPrefecture = value;
-                  }
-                },
-              ),
-              TextField(
-                controller: tempCityController,
-                decoration: const InputDecoration(labelText: '市区町村名'),
-              ),
-            ],
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButton<String>(
+                    isExpanded: true,
+                    value: tempPrefecture,
+                    items: _prefectures.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          tempPrefecture = value;
+                        });
+                      }
+                    },
+                  ),
+                  TextField(
+                    controller: tempCityController,
+                    decoration: const InputDecoration(labelText: '市区町村名'),
+                  ),
+                ],
+              );
+            },
           ),
           actions: [
             TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('キャンセル')),
@@ -204,15 +208,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _handleTapGoalTimeSetting() {
-    if (_isLocked) {
+  void _handleTapGoalTimeSetting() async {
+    if (_isLocked && _weekStartDate != null) {
       final now = DateTime.now();
       final daysRemaining = 7 - now.difference(_weekStartDate!).inDays;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('目標時刻の変更は週3回までです。あと$daysRemaining日でリセットされます。')),
       );
     } else {
-      _selectTime(context);
+      final remainingChanges = 3 - _changeCount;
+      final doChange = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('目標入眠時刻の変更'),
+          content: Text('今週の残り変更回数は$remainingChanges回です。\n変更しますか？'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('変更しない'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('変更する'),
+            ),
+          ],
+        ),
+      );
+
+      if (doChange == true) {
+        _selectTime(context);
+      }
     }
   }
 
@@ -297,6 +322,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                if (_isLocked) const Icon(Icons.lock, color: Colors.grey),
+                if (_isLocked) const SizedBox(width: 8),
                 Text(
                   _goalTime.format(context),
                   style: Theme.of(context).textTheme.titleLarge,
