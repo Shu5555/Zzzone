@@ -49,7 +49,3 @@ app.*.map.json
 
 # Environment variables
 .env
-
-# Keystore files
-/android/key.properties
-/android/app/upload-keystore.jks
