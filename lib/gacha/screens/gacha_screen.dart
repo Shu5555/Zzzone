@@ -522,7 +522,7 @@ class _GachaScreenState extends State<GachaScreen> {
               ),
               const Spacer(),
               // Gacha Banner Image
-              Image.asset('assets/images/gacha_banner.png', height: 200),
+              Image.asset('assets/images/gacha_banner.webp', height: 200),
               const Spacer(),
               ElevatedButton(
                 onPressed: _isPulling ? null : () => _pullGacha(config, items),

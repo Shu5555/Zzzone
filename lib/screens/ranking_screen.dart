@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../services/supabase_ranking_service.dart';
 import '../utils/date_helper.dart'; // Import the date helper
 import 'ranking_quotes_screen.dart'; // Import the new screen
 
@@ -16,7 +16,7 @@ class _RankingScreenState extends State<RankingScreen> {
   @override
   void initState() {
     super.initState();
-    _rankingFuture = ApiService().getRanking(getLogicalDateString(DateTime.now()));
+    _rankingFuture = SupabaseRankingService().getRanking(date: getLogicalDateString(DateTime.now()));
   }
 
   String _formatDuration(int totalMinutes) {

@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/database_helper.dart';
@@ -32,24 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedAiTone = 'default';
   String _selectedAiGender = 'unspecified'; // New
   bool _isLoadingAiSettings = true;
-  final Map<String, String> _aiToneOptions = {
-    'default': '通常',
-    'polite': '丁寧',
-    'friendly': '友達風',
-    'butler': '執事風',
-    'tsundere': 'ツンデレ',
-    'counselor': 'カウンセラー',
-    'childcare': '保育士',
-    'researcher': '研究者',
-    'android': 'アンドロイド',
-    'sage': '賢者',
-    'ottori': 'おっとり系',
-    'cool': 'クール系',
-    'genki': '元気いっぱい',
-    'oneesan': 'お姉さん',
-    'genius_girl': '天才少女',
-    'high_school_boy': '男子高校生',
-  };
+  Map<String, String> _aiToneOptions = {};
 
   static const List<String> _prefectures = [
     '北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県',
@@ -64,7 +49,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPreferences();
+    _loadSettings();
   }
 
   @override
@@ -73,7 +58,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 
-  Future<void> _loadPreferences() async {
+  Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     _userId = prefs.getString('userId');
 
@@ -106,6 +91,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _selectedAiGender = userProfile?['ai_gender_preference'] ?? 'unspecified';
       }
     }
+
+    // Load AI Tone Options
+    final jsonString = await rootBundle.loadString('assets/persona_display_names.json');
+    final Map<String, dynamic> decodedJson = json.decode(jsonString);
+    _aiToneOptions = decodedJson.map((key, value) => MapEntry(key, value.toString()));
 
     setState(() {
       _isLoadingAiSettings = false;
@@ -159,19 +149,128 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showWeatherLocationDialog() async {
-    // ... (omitted for brevity, unchanged)
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) {
+        String tempPrefecture = _selectedPrefecture;
+        final tempCityController = TextEditingController(text: _weatherCityName);
+        return AlertDialog(
+          title: const Text('天気予報の地点設定'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButton<String>(
+                isExpanded: true,
+                value: tempPrefecture,
+                items: _prefectures.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    // This is a bit of a hack to rebuild the dialog state
+                    (context as Element).markNeedsBuild();
+                    tempPrefecture = value;
+                  }
+                },
+              ),
+              TextField(
+                controller: tempCityController,
+                decoration: const InputDecoration(labelText: '市区町村名'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('キャンセル')),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop({
+                  'prefecture': tempPrefecture,
+                  'city': tempCityController.text,
+                });
+              },
+              child: const Text('保存'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('weather_prefecture', result['prefecture']!);
+      await prefs.setString('weather_city_name', result['city']!);
+      setState(() {
+        _selectedPrefecture = result['prefecture']!;
+        _weatherCityName = result['city']!;
+      });
+    }
   }
 
   void _handleTapGoalTimeSetting() {
-    // ... (omitted for brevity, unchanged)
+    if (_isLocked) {
+      final now = DateTime.now();
+      final daysRemaining = 7 - now.difference(_weekStartDate!).inDays;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('目標時刻の変更は週3回までです。あと$daysRemaining日でリセットされます。')),
+      );
+    } else {
+      _selectTime(context);
+    }
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    // ... (omitted for brevity, unchanged)
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: _goalTime,
+    );
+    if (picked != null && picked != _goalTime) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('goalHour', picked.hour);
+      await prefs.setInt('goalMinute', picked.minute);
+      
+      DateTime now = DateTime.now();
+      if (_weekStartDate == null) {
+        _weekStartDate = now;
+        await prefs.setString('goalTimeChangeWeekStart', _weekStartDate!.toIso8601String());
+      }
+      
+      setState(() {
+        _goalTime = picked;
+        _changeCount++;
+      });
+      
+      await prefs.setInt('goalTimeChangeCount', _changeCount);
+      if (_changeCount >= 3) {
+        setState(() {
+          _isLocked = true;
+        });
+      }
+    }
   }
 
   Future<void> _deleteAllSleepRecords() async {
-    // ... (omitted for brevity, unchanged)
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('すべての睡眠記録を削除'),
+        content: const Text('本当にすべての睡眠記録を削除しますか？この操作は元に戻せません。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('キャンセル')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('削除', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirmed) {
+      final db = await DatabaseHelper.instance.database;
+      await db.delete('sleep_records');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('すべての睡眠記録を削除しました')),
+        );
+      }
+    }
   }
 
   @override

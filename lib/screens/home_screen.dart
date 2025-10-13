@@ -11,13 +11,13 @@ import '../models/weather_info.dart';
 import '../services/database_helper.dart';
 import '../services/supabase_ranking_service.dart';
 import '../services/weather_service.dart';
-import 'history_screen.dart';
-import 'quote_list_screen.dart';
-import 'ranking_screen.dart';
-import 'settings_screen.dart';
-import 'shop_screen.dart';
+import 'history_screen.dart' deferred as history;
+import 'quote_list_screen.dart' deferred as quote_list;
+import 'ranking_screen.dart' deferred as ranking;
+import 'settings_screen.dart' deferred as settings;
+import 'shop_screen.dart' deferred as shop;
 import 'sleep_edit_screen.dart';
-import 'announcements_screen.dart';
+import 'announcements_screen.dart' deferred as announcements;
 
 import '../services/announcement_service.dart';
 
@@ -273,18 +273,18 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  void _navigateTo(Widget screen) async {
+  void _navigateTo(Widget screen, {bool isSettings = false, bool isAnnouncements = false}) async {
 
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),
     );
     _loadData();
 
-    if (screen is SettingsScreen) {
+    if (isSettings) {
       _fetchWeather(); // Re-fetch weather after returning from settings
     }
 
-    if (screen is! AnnouncementsScreen) {
+    if (!isAnnouncements) {
       _checkUnreadStatus();
     }
   }
@@ -354,7 +354,10 @@ class _HomeScreenState extends State<HomeScreen> {
               IconButton(
                 icon: const Icon(Icons.info_outline),
                 tooltip: 'お知らせ',
-                onPressed: () => _navigateTo(const AnnouncementsScreen()),
+                onPressed: () async {
+                  await announcements.loadLibrary();
+                  _navigateTo(announcements.AnnouncementsScreen(), isAnnouncements: true);
+                },
               ),
               if (_hasUnreadAnnouncements)
                 Positioned(
@@ -377,27 +380,42 @@ class _HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: const Icon(Icons.format_quote_outlined),
             tooltip: '名言一覧',
-            onPressed: () => _navigateTo(const QuoteListScreen()),
+            onPressed: () async {
+              await quote_list.loadLibrary();
+              _navigateTo(quote_list.QuoteListScreen());
+            },
           ),
           IconButton(
             icon: const Icon(Icons.card_giftcard_outlined),
             tooltip: 'ガチャ',
-            onPressed: () => _navigateTo(const ShopScreen()),
+            onPressed: () async {
+              await shop.loadLibrary();
+              _navigateTo(shop.ShopScreen());
+            },
           ),
           IconButton(
             icon: const Icon(Icons.leaderboard_outlined),
             tooltip: 'ランキング',
-            onPressed: () => _navigateTo(const RankingScreen()),
+            onPressed: () async {
+              await ranking.loadLibrary();
+              _navigateTo(ranking.RankingScreen());
+            },
           ),
           IconButton(
             icon: const Icon(Icons.settings_outlined),
             tooltip: '設定',
-            onPressed: () => _navigateTo(const SettingsScreen()),
+            onPressed: () async {
+              await settings.loadLibrary();
+              _navigateTo(settings.SettingsScreen(), isSettings: true);
+            },
           ),
           IconButton(
             icon: const Icon(Icons.history_outlined),
             tooltip: '履歴',
-            onPressed: () => _navigateTo(const HistoryScreen()),
+            onPressed: () async {
+              await history.loadLibrary();
+              _navigateTo(history.HistoryScreen());
+            },
           ),
         ],
       ),
