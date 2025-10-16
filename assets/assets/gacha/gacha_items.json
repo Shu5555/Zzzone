@@ -547,7 +547,7 @@
     },
     {
       "id": "quote_069",
-      "rarityId": "own_chin",
+      "rarityId": "ultra_rare",
       "customData": {
         "text": "わんちんくん万歳！！",
         "author": "seiyun0808"
@@ -1507,7 +1507,7 @@
     },
     {
       "id": "quote_189",
-      "rarityId": "super_rare",
+      "rarityId": "rare",
       "customData": {
         "text": "安いもんだ、腕の一本くらい。無事でよかった",
         "author": "シャンクス"
@@ -1536,6 +1536,31 @@
         "text": "君が愛すべきは、人間という不完全な存在ではなく、知の体系という完全な美しさです。",
         "author": "孤高の指導者"
       }
+    },
+    {
+      "id": "quote_193",
+      "rarityId": "super_rare",
+      "customData": {
+        "text": "為せば成る、為さねば成らぬ、何事も、成らぬは人の為さぬなりけり",
+        "author": "上杉鷹山"
+      }
+    },
+    {
+      "id": "quote_194",
+      "rarityId": "ultra_rare",
+      "customData": {
+        "text": "サ イ ゼ は 前 菜",
+        "author": "A1umikan8210"
+      }
+    },
+    {
+      "id": "quote_195",
+      "rarityId": "own_chin",
+      "customData": {
+        "text": "癖を語るソクラテス\n\n「ムチムチ」",
+        "author": "kina0399"
+      }
     }
+    
   ]
 }
