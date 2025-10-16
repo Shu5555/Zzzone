@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sleep_management_app/services/supabase_ranking_service.dart';
@@ -184,6 +185,8 @@ class _AnalysisReportViewState extends State<AnalysisReportScreen> {
         return ListView(
           padding: const EdgeInsets.all(16.0),
           children: [
+            _buildOverallScoreCard(),
+            const SizedBox(height: 16),
             _buildSectionCard(context, title: 'AIによる総評', icon: Icons.comment_rounded, color: Colors.blue, content: Text(_llmAnalysisResult!['overall_comment'] as String? ?? 'コメントはありません。', style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.5))),
             const SizedBox(height: 16),
             _buildSectionCard(context, title: 'AIが見つけた良い点', icon: Icons.thumb_up_rounded, color: Colors.green, content: _buildPointList(_llmAnalysisResult!['positive_points'] as List<dynamic>? ?? [])),
@@ -206,7 +209,66 @@ class _AnalysisReportViewState extends State<AnalysisReportScreen> {
     }
   }
 
-  // --- UI Helper methods (unchanged) ---
+  // --- UI Helper methods ---
+  Widget _buildOverallScoreCard() {
+    final score = _llmAnalysisResult?['overall_score'];
+    final reason = _llmAnalysisResult?['overall_score_reason'] as String?;
+
+    if (score == null || score is! int) {
+      return const SizedBox.shrink();
+    }
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.auto_awesome, color: Colors.deepPurple.shade300, size: 28),
+              const SizedBox(width: 12),
+              Text('AIによる総合得点', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold))
+            ]),
+            const SizedBox(height: 24),
+            Center(
+              child: SizedBox(
+                width: 150,
+                height: 150,
+                child: CustomPaint(
+                  painter: _DonutChartPainter(score: score.toDouble(), maxScore: 100),
+                  child: Center(
+                    child: Text(
+                      score.toString(),
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        color: Colors.deepPurple,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (reason != null && reason.isNotEmpty)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    reason,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: Colors.white),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildPointList(List<dynamic> points) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: points.map((point) => Padding(padding: const EdgeInsets.only(bottom: 8.0), child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('・ ', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)), Expanded(child: Text(point as String, style: Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.4)))]))).toList());
   }
@@ -230,5 +292,46 @@ class _AnalysisReportViewState extends State<AnalysisReportScreen> {
 
   Widget _buildAnalysisItem(String label, double score) {
     return Column(children: [Text(label, style: Theme.of(context).textTheme.bodyMedium), Text(score > 0 ? score.toStringAsFixed(1) : '-', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold))]);
+  }
+}
+
+class _DonutChartPainter extends CustomPainter {
+  final double score;
+  final double maxScore;
+
+  _DonutChartPainter({required this.score, required this.maxScore});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final Paint backgroundPaint = Paint()
+      ..color = Colors.grey.shade200
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12;
+
+    final Paint foregroundPaint = Paint()
+      ..color = Colors.deepPurple.shade400
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width / 2, size.height / 2);
+
+    canvas.drawCircle(center, radius, backgroundPaint);
+
+    final double sweepAngle = 2 * math.pi * (score / maxScore);
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2, // Start from the top
+      sweepAngle,
+      false,
+      foregroundPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    return true;
   }
 }
