@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sleep_management_app/services/supabase_ranking_service.dart';
 import '../models/sleep_record.dart';
 import '../services/database_helper.dart';
@@ -18,9 +19,10 @@ class AnalysisReportScreen extends StatefulWidget {
 }
 
 class _AnalysisReportViewState extends State<AnalysisReportScreen> {
+  final _supabase = Supabase.instance.client;
   ReportState _state = ReportState.loading;
   String _message = '分析データを読み込んでいます...';
-  
+
   Map<String, dynamic>? _llmAnalysisResult;
   Map<String, dynamic>? _localAnalysisResult;
 
@@ -28,6 +30,24 @@ class _AnalysisReportViewState extends State<AnalysisReportScreen> {
   void initState() {
     super.initState();
     _triggerAnalysisCheck();
+  }
+
+  Future<void> _saveScoreToSupabase(int score, String userId) async {
+    try {
+      final dateString = getLogicalDateString(DateTime.now());
+      await _supabase.from('ai_score_ranking').upsert({
+        'user_id': userId,
+        'score': score,
+        'recorded_date': dateString,
+      }, onConflict: 'user_id, recorded_date');
+    } catch (e) {
+      // ignore: avoid_print
+      print('--- Score Save Error ---');
+      // ignore: avoid_print
+      print('Failed to save score from widget: $e');
+      // Here you could show a non-blocking snackbar to the user
+      // For example: ScaffoldMessenger.of(context).showSnackBar(...);
+    }
   }
 
   Future<void> _triggerAnalysisCheck() async {
@@ -59,28 +79,60 @@ class _AnalysisReportViewState extends State<AnalysisReportScreen> {
     final localResult = _performLocalAnalysis(records);
 
     // 4. LLM Analysis (Cache check & API call)
-    final cachedData = await CacheService().loadAnalysis();
+    final cacheService = CacheService();
+    final cachedData = await cacheService.loadAnalysis();
     final currentLatestRecordDataId = records.first.dataId;
 
-    if (cachedData != null && cachedData.latestRecordId == currentLatestRecordDataId) {
+    // 4a. Check for a recent failure
+    if (cachedData?.failureTimestamp != null) {
+      final timeSinceFailure = DateTime.now().difference(cachedData!.failureTimestamp!);
+      if (timeSinceFailure.inMinutes < 1) {
+        if (mounted) setState(() {
+          _state = ReportState.error;
+          _message = '分析APIの呼び出しが連続で失敗しました。\n1分ほど時間をおいてから、再度お試しください。';
+        });
+        return; // Abort the API call
+      }
+    }
+
+    // 4b. Check for a valid success cache
+    if (cachedData?.analysisResult != null && cachedData?.latestRecordId == currentLatestRecordDataId) {
       if (mounted) setState(() {
-        _llmAnalysisResult = cachedData.analysisResult;
+        _llmAnalysisResult = cachedData!.analysisResult;
         _localAnalysisResult = localResult;
         _state = ReportState.success;
       });
     } else {
+      // 4c. Fetch from API
       try {
+        if (userId == null) {
+          throw Exception('ユーザーIDが取得できませんでした。再ログインしてください。');
+        }
+        
+        // Fetch analysis from the simplified service
         final newLlmResult = await AnalysisService().fetchSleepAnalysis(records, aiTone, aiGender);
-        await CacheService().saveAnalysis(newLlmResult, currentLatestRecordDataId);
+
+        // Save the score here, where auth context is guaranteed
+        if (newLlmResult.containsKey('overall_score')) {
+          final score = newLlmResult['overall_score'] as int;
+          await _saveScoreToSupabase(score, userId);
+        }
+
+        // Save the successful result to cache
+        await cacheService.saveAnalysis(newLlmResult, currentLatestRecordDataId);
+        
         if (mounted) setState(() {
           _llmAnalysisResult = newLlmResult;
           _localAnalysisResult = localResult;
           _state = ReportState.success;
         });
+
       } catch (e) {
+        // On failure, save a failure timestamp to prevent rapid retries
+        await cacheService.saveFailure();
         if (mounted) setState(() {
           _state = ReportState.error;
-          _message = '分析データの取得に失敗しました.\n時間をおいて再度お試しください。\nError: ${e.toString()}';
+          _message = '分析データの取得に失敗しました。\n時間をおいて再度お試しください。\nError: ${e.toString()}';
         });
       }
     }

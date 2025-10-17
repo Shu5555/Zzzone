@@ -7,17 +7,19 @@ import '../models/sleep_record.dart';
 
 class AnalysisService {
   static final String _apiKey = const String.fromEnvironment('GEMINI_API_KEY');
-  static const String _apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
+  static const String _apiEndpoint =
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
 
   final _timeoutDuration = const Duration(seconds: 60);
 
-  Future<String> _createPrompt(List<SleepRecord> records, String aiTone, String aiGender) async {
+  Future<String> _createPrompt(
+      List<SleepRecord> records, String aiTone, String aiGender) async {
     var dataText = '日付,睡眠時間,スコア(10満点),日中のパフォーマンス,昼間の眠気,二度寝,メモ\n';
     for (var r in records) {
       final sleepDate = r.sleepTime.toIso8601String().substring(0, 10);
       final durationHours = r.duration.inHours;
       final durationMins = r.duration.inMinutes.remainder(60);
-      final performanceMap = { 1: '悪い', 2: '普通', 3: '良い' };
+      final performanceMap = {1: '悪い', 2: '普通', 3: '良い'};
       final hadDrowsiness = r.hadDaytimeDrowsiness ? 'あり' : 'なし';
       final didOversleep = r.didNotOversleep ? 'なし' : 'あり';
 
@@ -30,10 +32,12 @@ class AnalysisService {
       dataText += '${r.memo ?? ''}\n';
     }
 
-    final jsonString = await rootBundle.loadString('assets/persona_definitions.json');
+    final jsonString =
+        await rootBundle.loadString('assets/persona_definitions.json');
     final toneInstructions = json.decode(jsonString);
 
-    final instruction = toneInstructions[aiTone] ?? toneInstructions['default']!;
+    final instruction =
+        toneInstructions[aiTone] ?? toneInstructions['default']!;
     String genderInstruction = '';
     if (aiGender == 'male') {
       genderInstruction = 'また、回答の相手は男性です。';
@@ -78,33 +82,39 @@ $dataText
 ''';
   }
 
-  Future<Map<String, dynamic>> fetchSleepAnalysis(List<SleepRecord> records, String aiTone, String aiGender) async {
+  Future<Map<String, dynamic>> fetchSleepAnalysis(
+      List<SleepRecord> records, String aiTone, String aiGender) async {
     try {
       final prompt = await _createPrompt(records, aiTone, aiGender);
 
-      final response = await http.post(
-        Uri.parse(_apiEndpoint),
-        headers: {
-          'Content-Type': 'application/json',
-          'X-goog-api-key': _apiKey,
-        },
-        body: jsonEncode({
-          'contents': [
-            {
-              'parts': [
-                {'text': prompt}
+      final response = await http
+          .post(
+            Uri.parse(_apiEndpoint),
+            headers: {
+              'Content-Type': 'application/json',
+              'X-goog-api-key': _apiKey,
+            },
+            body: jsonEncode({
+              'contents': [
+                {
+                  'parts': [
+                    {'text': prompt}
+                  ]
+                }
               ]
-            }
-          ]
-        }),
-      ).timeout(_timeoutDuration);
+            }),
+          )
+          .timeout(_timeoutDuration);
 
       if (response.statusCode == 200) {
         final decodedBody = utf8.decode(response.bodyBytes);
         final jsonResult = jsonDecode(decodedBody);
 
-        if (jsonResult['candidates'] != null && jsonResult['candidates'][0]['content']['parts'][0]['text'] != null) {
-          var analysisText = jsonResult['candidates'][0]['content']['parts'][0]['text'] as String;
+        if (jsonResult['candidates'] != null &&
+            jsonResult['candidates'][0]['content']['parts'][0]['text'] !=
+                null) {
+          var analysisText = jsonResult['candidates'][0]['content']['parts']
+              [0]['text'] as String;
 
           final regex = RegExp(r"```json\n?([\s\S]*?)\n?```");
           final match = regex.firstMatch(analysisText.trim());
@@ -113,17 +123,23 @@ $dataText
           }
 
           return jsonDecode(analysisText) as Map<String, dynamic>;
+
         } else {
           throw Exception('Failed to parse Gemini response format.');
         }
       } else {
-        print('Gemini API Error. Status: ${response.statusCode}, Body: ${response.body}');
-        throw Exception('Failed to fetch sleep analysis: ${response.statusCode}');
+        // ignore: avoid_print
+        print(
+            'Gemini API Error. Status: ${response.statusCode}, Body: ${response.body}');
+        throw Exception(
+            'Failed to fetch sleep analysis: ${response.statusCode}');
       }
     } on TimeoutException {
+      // ignore: avoid_print
       print('Connection to Gemini API timed out.');
       throw Exception('Connection timed out. Please try again.');
     } catch (e) {
+      // ignore: avoid_print
       print('Error in fetchSleepAnalysis: $e');
       rethrow;
     }

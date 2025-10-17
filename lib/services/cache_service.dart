@@ -15,6 +15,15 @@ class CacheService {
     await prefs.setString(_key, jsonEncode(cache.toJson()));
   }
 
+  Future<void> saveFailure() async {
+    final prefs = await SharedPreferences.getInstance();
+    final cache = AnalysisCache(
+      timestamp: DateTime.now(),
+      failureTimestamp: DateTime.now(),
+    );
+    await prefs.setString(_key, jsonEncode(cache.toJson()));
+  }
+
   Future<AnalysisCache?> loadAnalysis() async {
     final prefs = await SharedPreferences.getInstance();
     final jsonString = prefs.getString(_key);

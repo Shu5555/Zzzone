@@ -1550,7 +1550,7 @@
       "rarityId": "ultra_rare",
       "customData": {
         "text": "サ イ ゼ は 前 菜",
-        "author": "A1umikan8210"
+        "author": "a1umikan8210"
       }
     },
     {
@@ -1559,6 +1559,14 @@
       "customData": {
         "text": "癖を語るソクラテス\n\n「ムチムチ」",
         "author": "kina0399"
+      }
+    },
+    {
+      "id": "quote_196",
+      "rarityId": "ultra_rare",
+      "customData": {
+        "text": "生きとし生けるものは皆、運命の釘師である。",
+        "author": "a1umikan8210"
       }
     }
     

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/supabase_ranking_service.dart';
-import '../utils/date_helper.dart'; // Import the date helper
-import 'ranking_quotes_screen.dart'; // Import the new screen
+import '../utils/date_helper.dart';
+import 'ranking_quotes_screen.dart';
 
 class RankingScreen extends StatefulWidget {
   const RankingScreen({super.key});
@@ -10,13 +10,32 @@ class RankingScreen extends StatefulWidget {
   State<RankingScreen> createState() => _RankingScreenState();
 }
 
-class _RankingScreenState extends State<RankingScreen> {
-  late Future<List<Map<String, dynamic>>> _rankingFuture;
+class _RankingScreenState extends State<RankingScreen>
+    with SingleTickerProviderStateMixin {
+  final SupabaseRankingService _rankingService = SupabaseRankingService();
+  late TabController _tabController;
+
+  // To avoid re-fetching on every build, we hold futures in state variables.
+  late Future<List<Map<String, dynamic>>> _sleepTimeRankingFuture;
+  late Future<List<Map<String, dynamic>>> _aiScoreRankingFuture;
 
   @override
   void initState() {
     super.initState();
-    _rankingFuture = SupabaseRankingService().getRanking(date: getLogicalDateString(DateTime.now()));
+    _tabController = TabController(length: 2, vsync: this);
+    _fetchRankings();
+  }
+
+  void _fetchRankings() {
+    final date = getLogicalDateString(DateTime.now());
+    _sleepTimeRankingFuture = _rankingService.getRanking(date: date);
+    _aiScoreRankingFuture = _rankingService.getAiScoreRanking();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   String _formatDuration(int totalMinutes) {
@@ -26,18 +45,18 @@ class _RankingScreenState extends State<RankingScreen> {
     return '${hours}時間 ${minutes}分';
   }
 
-  BoxDecoration _buildBackgroundDecoration(String backgroundId) {
+  BoxDecoration _buildBackgroundDecoration(String? backgroundId) {
     Color backgroundColor;
+    final id = backgroundId ?? 'default';
 
-    if (backgroundId.startsWith('color_')) {
-      final hexCode = backgroundId.replaceFirst('color_#', '');
+    if (id.startsWith('color_')) {
+      final hexCode = id.replaceFirst('color_#', '');
       try {
         backgroundColor = Color(int.parse('0xff$hexCode'));
       } catch (e) {
-        backgroundColor = Colors.transparent; // Fallback to transparent
+        backgroundColor = Colors.transparent;
       }
     } else {
-      // Handles 'default' and any legacy pattern IDs by making the background transparent.
       backgroundColor = Colors.transparent;
     }
     return BoxDecoration(color: backgroundColor);
@@ -47,7 +66,7 @@ class _RankingScreenState extends State<RankingScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('睡眠時間ランキング'),
+        title: const Text('ランキング'),
         actions: [
           IconButton(
             icon: const Icon(Icons.format_quote),
@@ -59,106 +78,156 @@ class _RankingScreenState extends State<RankingScreen> {
             },
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: '睡眠時間'),
+            Tab(text: 'AIスコア'),
+          ],
+        ),
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _rankingFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('エラーが発生しました: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('ランキングデータがまだありません。'));
-          }
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildSleepTimeRanking(),
+          _buildAiScoreRanking(),
+        ],
+      ),
+    );
+  }
 
-          final rankingData = snapshot.data!;
+  Widget _buildSleepTimeRanking() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _sleepTimeRankingFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('エラーが発生しました: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('ランキングデータがまだありません。'));
+        }
 
-          return ListView.builder(
-            itemCount: rankingData.length,
-            itemBuilder: (context, index) {
-              final entry = rankingData[index];
-              final rank = index + 1;
-              final user = entry['users'];
-              if (user == null) return const SizedBox.shrink();
+        final rankingData = snapshot.data!;
+        return ListView.builder(
+          itemCount: rankingData.length,
+          itemBuilder: (context, index) {
+            final entry = rankingData[index];
+            final user = entry['users'];
+            if (user == null) return const SizedBox.shrink();
 
-              final username = user['username'] ?? '名無しさん';
-              final duration = entry['sleep_duration'] as int? ?? 0;
-              final backgroundId = user['background_preference'] as String? ?? 'default';
+            return _buildRankingCard(
+              rank: index + 1,
+              username: user['username'] ?? '名無しさん',
+              value: _formatDuration(entry['sleep_duration'] as int? ?? 0),
+              backgroundId: user['background_preference'] as String?,
+            );
+          },
+        );
+      },
+    );
+  }
 
-              Widget? leadingIcon;
-              TextStyle? titleStyle;
-              TextStyle? rankStyle;
+  Widget _buildAiScoreRanking() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _aiScoreRankingFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('エラーが発生しました: ${snapshot.error}'));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('ランキングデータがまだありません。'));
+        }
 
-              if (rank == 1) {
-                leadingIcon = Icon(Icons.emoji_events, color: Colors.yellow[600]);
-                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
-                rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
-              } else if (rank == 2) {
-                leadingIcon = Icon(Icons.emoji_events, color: Colors.grey[300]);
-                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
-                rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
-              } else if (rank == 3) {
-                leadingIcon = Icon(Icons.emoji_events, color: Colors.orange[300]);
-                titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
-                rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
-              } else {
-                titleStyle = const TextStyle(color: Colors.white, shadows: [Shadow(blurRadius: 2, color: Colors.black)]);
-                rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 2, color: Colors.black)]);
-              }
+        final rankingData = snapshot.data!;
+        return ListView.builder(
+          itemCount: rankingData.length,
+          itemBuilder: (context, index) {
+            final entry = rankingData[index];
+            return _buildRankingCard(
+              rank: index + 1,
+              username: entry['username'] ?? '名無しさん',
+              value: '${entry['score'] ?? 0} 点',
+              backgroundId: entry['background_preference'] as String?,
+            );
+          },
+        );
+      },
+    );
+  }
 
-              return Card(
-                elevation: rank <= 3 ? 4.0 : 1.0,
-                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                clipBehavior: Clip.antiAlias,
-                child: Stack(
-                  children: [
-                    // Layer 1: Background (Image or Color)
-                    Positioned.fill(
-                      child: Container(decoration: _buildBackgroundDecoration(backgroundId)),
-                    ),
-                    // Layer 2: Gradient Overlay
-                    Positioned.fill(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [
-                              Colors.black.withOpacity(0.5),
-                              Colors.transparent
-                            ],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            stops: const [0.0, 0.8],
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Layer 3: Content
-                    ListTile(
-                      leading: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('$rank位', style: rankStyle),
-                          if (leadingIcon != null) leadingIcon,
-                        ],
-                      ),
-                      title: Text(username, style: titleStyle),
-                      trailing: Text(
-                        _formatDuration(duration),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
-                              color: Colors.white,
-                              shadows: const [Shadow(blurRadius: 2, color: Colors.black)]
-                            ),
-                      ),
-                    ),
-                  ],
+  Widget _buildRankingCard({
+    required int rank,
+    required String username,
+    required String value,
+    String? backgroundId,
+  }) {
+    Widget? leadingIcon;
+    TextStyle? titleStyle;
+    TextStyle? rankStyle;
+
+    if (rank == 1) {
+      leadingIcon = Icon(Icons.emoji_events, color: Colors.yellow[600]);
+      titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
+      rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
+    } else if (rank == 2) {
+      leadingIcon = Icon(Icons.emoji_events, color: Colors.grey[300]);
+      titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 17, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
+      rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
+    } else if (rank == 3) {
+      leadingIcon = Icon(Icons.emoji_events, color: Colors.orange[300]);
+      titleStyle = const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
+      rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 3, color: Colors.black)]);
+    } else {
+      titleStyle = const TextStyle(color: Colors.white, shadows: [Shadow(blurRadius: 2, color: Colors.black)]);
+      rankStyle = const TextStyle(fontWeight: FontWeight.bold, color: Colors.white, shadows: [Shadow(blurRadius: 2, color: Colors.black)]);
+    }
+
+    return Card(
+      elevation: rank <= 3 ? 4.0 : 1.0,
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(decoration: _buildBackgroundDecoration(backgroundId)),
+          ),
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.black.withOpacity(0.5), Colors.transparent],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  stops: const [0.0, 0.8],
                 ),
-              );
-            },
-          );
-        },
+              ),
+            ),
+          ),
+          ListTile(
+            leading: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('$rank位', style: rankStyle),
+                if (leadingIcon != null) leadingIcon,
+              ],
+            ),
+            title: Text(username, style: titleStyle),
+            trailing: Text(
+              value,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: rank <= 3 ? FontWeight.bold : FontWeight.normal,
+                    color: Colors.white,
+                    shadows: const [Shadow(blurRadius: 2, color: Colors.black)],
+                  ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -180,4 +180,16 @@ class SupabaseRankingService {
       'p_coins_to_add': coinsToAdd,
     });
   }
+
+  /// Fetches the AI score ranking from Supabase.
+  Future<List<Map<String, dynamic>>> getAiScoreRanking() async {
+    try {
+      final response = await _supabase.rpc('get_ai_score_ranking');
+      return (response as List).map((item) => item as Map<String, dynamic>).toList();
+    } catch (e) {
+      // ignore: avoid_print
+      print('Error fetching AI score ranking: $e');
+      return [];
+    }
+  }
 }

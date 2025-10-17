@@ -1,20 +1,26 @@
 class AnalysisCache {
-  final Map<String, dynamic> analysisResult;
+  final Map<String, dynamic>? analysisResult;
   final DateTime timestamp;
-  final String latestRecordId; // 分析対象のうち、最も新しい睡眠記録のID
+  final String? latestRecordId; // 分析対象のうち、最も新しい睡眠記録のID
+  final DateTime? failureTimestamp; // API呼び出しが最後に失敗した日時
 
   AnalysisCache({
-    required this.analysisResult,
+    this.analysisResult,
     required this.timestamp,
-    required this.latestRecordId, // 変更
+    this.latestRecordId,
+    this.failureTimestamp,
   });
 
-  // fromJson, toJson も latestRecordId を含めるように更新
   factory AnalysisCache.fromJson(Map<String, dynamic> json) {
     return AnalysisCache(
-      analysisResult: Map<String, dynamic>.from(json['analysisResult']),
+      analysisResult: json['analysisResult'] != null
+          ? Map<String, dynamic>.from(json['analysisResult'])
+          : null,
       timestamp: DateTime.parse(json['timestamp']),
-      latestRecordId: json['latestRecordId'] as String, // 変更
+      latestRecordId: json['latestRecordId'] as String?,
+      failureTimestamp: json['failureTimestamp'] != null
+          ? DateTime.parse(json['failureTimestamp'])
+          : null,
     );
   }
 
@@ -23,6 +29,7 @@ class AnalysisCache {
       'analysisResult': analysisResult,
       'timestamp': timestamp.toIso8601String(),
       'latestRecordId': latestRecordId,
+      'failureTimestamp': failureTimestamp?.toIso8601String(),
     };
   }
 }
