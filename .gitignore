@@ -49,3 +49,6 @@ app.*.map.json
 
 # Environment variables
 .env
+
+# Ignore image files
+*.png
