@@ -29,7 +29,7 @@ class _RankingScreenState extends State<RankingScreen>
   void _fetchRankings() {
     final date = getLogicalDateString(DateTime.now());
     _sleepTimeRankingFuture = _rankingService.getRanking(date: date);
-    _aiScoreRankingFuture = _rankingService.getAiScoreRanking();
+    _aiScoreRankingFuture = _rankingService.getAiScoreRanking(date: date);
   }
 
   @override

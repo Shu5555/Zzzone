@@ -7,6 +7,8 @@ import '../services/database_helper.dart';
 import '../services/supabase_ranking_service.dart';
 import 'about_screen.dart';
 import 'profile_screen.dart';
+import '../services/dropbox_service.dart';
+import 'backup_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,6 +19,8 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _supabaseService = SupabaseRankingService();
+  final _dropboxService = DropboxService();
+  bool _isDropboxLinked = false;
 
   // Goal Time State
   TimeOfDay _goalTime = const TimeOfDay(hour: 23, minute: 0);
@@ -50,6 +54,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadSettings();
+    _checkDropboxLinkStatus();
   }
 
   @override
@@ -101,6 +106,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _isLoadingAiSettings = false;
     });
   }
+
+  // --- Dropbox Methods (START) ---
+  Future<void> _checkDropboxLinkStatus() async {
+    final accessToken = await _dropboxService.getAccessToken();
+    if (mounted) {
+      setState(() {
+        _isDropboxLinked = accessToken != null;
+      });
+    }
+    // TODO: If linked, fetch user email from Dropbox API
+  }
+
+  Future<void> _handleDropboxAuth() async {
+    try {
+      await _dropboxService.authenticate();
+      await _checkDropboxLinkStatus();
+
+      if (mounted && _isDropboxLinked) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Dropboxと正常に連携しました')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Dropbox連携に失敗しました: ${e.toString()}')),
+        );
+      }
+    }
+  }
+  // --- Dropbox Methods (END) ---
 
   Future<void> _onAiToneChanged(String? newValue) async {
     if (newValue == null || _userId == null) return;
@@ -352,6 +388,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Text('データ管理', style: Theme.of(context).textTheme.titleSmall),
+          ),
+          ListTile(
+            leading: const Icon(Icons.cloud_sync_outlined),
+            title: const Text('Dropbox バックアップ'),
+            subtitle: Text(_isDropboxLinked ? '連携済み' : '未連携'),
+            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey),
+            onTap: () {
+              if (_isDropboxLinked) {
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BackupScreen()));
+              } else {
+                _handleDropboxAuth();
+              }
+            },
           ),
           ListTile(
             title: const Text('すべての睡眠記録を削除'),

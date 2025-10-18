@@ -181,10 +181,11 @@ class SupabaseRankingService {
     });
   }
 
-  /// Fetches the AI score ranking from Supabase.
-  Future<List<Map<String, dynamic>>> getAiScoreRanking() async {
+  /// Fetches the AI score ranking from Supabase for a specific date.
+  Future<List<Map<String, dynamic>>> getAiScoreRanking({String? date}) async {
     try {
-      final response = await _supabase.rpc('get_ai_score_ranking');
+      final targetDate = date ?? getLogicalDateInJST();
+      final response = await _supabase.rpc('get_ai_score_ranking', params: {'p_date': targetDate});
       return (response as List).map((item) => item as Map<String, dynamic>).toList();
     } catch (e) {
       // ignore: avoid_print

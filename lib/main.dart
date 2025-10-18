@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import 'models/sleep_record.dart';
 import 'screens/home_screen.dart';
 import 'services/database_helper.dart';
+import 'services/dropbox_service.dart';
 import 'utils/date_helper.dart';
 
 Future<void> _runDataMigration() async {
@@ -17,6 +18,23 @@ Future<void> _runDataMigration() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Handle Dropbox web auth callback before the app starts
+  if (kIsWeb) {
+    final uri = Uri.base;
+    if (uri.queryParameters.containsKey('code')) {
+      final dropboxService = DropboxService();
+      try {
+        await dropboxService.handleWebAuthCallback(uri);
+        // Optionally, you could navigate away or clear the URL here
+      } catch (e) {
+        if (kDebugMode) {
+          print('Error handling Dropbox web auth callback: $e');
+        }
+      }
+    }
+  }
+
   await initializeDateFormatting('ja_JP');
 
   await Supabase.initialize(
