@@ -18,6 +18,38 @@ class ThreeGachaScene {
   }
 
   /**
+   * カメラの位置とアスペクト比を、現在のウィンドウサイズに合わせて更新する
+   */
+  updateCameraPosition() {
+    const fov = 75; // 視野角（度数）
+    const aspect = window.innerWidth / window.innerHeight;
+    this.camera.aspect = aspect;
+
+    const radius = 5; // 玉が配置される円の半径
+    const tiltFactor = 0.4; // 玉のY位置を決める傾き係数
+
+    // シーンの幅と高さを計算（マージンを少し含める）
+    const sceneWidth = radius * 2 * 1.1;
+    const sceneHeight = (radius * tiltFactor) * 2 * 1.2;
+
+    const fovInRadians = (fov * Math.PI) / 180;
+
+    // 高さが画面に収まるために必要なカメラ距離を計算
+    const distanceForHeight = (sceneHeight / 2) / Math.tan(fovInRadians / 2);
+
+    // 幅が画面に収まるために必要なカメラ距離を計算
+    const distanceForWidth = (sceneWidth / 2) / (Math.tan(fovInRadians / 2) * aspect);
+
+    // より大きい方の距離を採用して、全体が収まるようにする
+    const distance = Math.max(distanceForHeight, distanceForWidth);
+
+    this.camera.position.z = distance + 1; // 見切れ防止のため、さらに少しだけカメラを引く
+
+    this.camera.updateProjectionMatrix();
+  }
+
+
+  /**
    * シーンの初期化
    */
   initScene() {
@@ -32,13 +64,7 @@ class ThreeGachaScene {
       0.1,                                   // ニアクリップ
       1000                                   // ファークリップ
     );
-    // For portrait screens, pull the camera back to fit the width
-    const aspect = window.innerWidth / window.innerHeight;
-    if (aspect < 1) {
-      this.camera.position.z = 10 / aspect;
-    } else {
-      this.camera.position.z = 10;
-    }
+    this.updateCameraPosition(); // ★新しいメソッドを呼び出してカメラ位置を初期設定
 
     // ★ レンダラーの最適化設定
     this.renderer = new THREE.WebGLRenderer({
@@ -67,8 +93,7 @@ class ThreeGachaScene {
    * ウィンドウリサイズ時の処理
    */
   onWindowResize() {
-    this.camera.aspect = window.innerWidth / window.innerHeight;
-    this.camera.updateProjectionMatrix();
+    this.updateCameraPosition(); // ★ウィンドウサイズ変更時にもカメラ位置を更新
     this.renderer.setSize(window.innerWidth, window.innerHeight);
   }
 
