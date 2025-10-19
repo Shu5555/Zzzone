@@ -108356,7 +108356,8 @@ $1(a){var s=null
 return A.lG(A.b([A.dV(!1,B.amN,s,s,s,s,s,s,new A.aAD(),s,s)],t.p),B.amB,B.an2)},
 $S:32}
 A.aAD.prototype={
-$0(){return window.location.reload()},
+$0(){window.location.reload()
+return null},
 $S:0}
 A.aAJ.prototype={
 $0(){this.a.w=!1},
