@@ -109416,7 +109416,7 @@ j=i}else j=i
 j.push(a0)}a2=m.$ti.h("bz<2>")
 a1=A.a1(new A.bz(m,a2),a2.h("v.E"))
 B.b.dF(a1,new A.aJW())
-if(q.c!=null)q.L(new A.aJX(q,o,b,a1))
+if(q.c!=null)q.L(new A.aJX(q,o==null?null:J.Z(o,"favorite_quote_id"),b,a1))
 return A.q(null,r)}})
 return A.r($async$xZ,r)},
 u5(a){return this.aw7(a)},
@@ -109468,7 +109468,7 @@ $2(a,b){return B.e.b_(b.d,a.d)},
 $S:249}
 A.aJX.prototype={
 $0(){var s=this,r=s.a,q=s.b
-r.r=q==null?null:J.Z(q,"favorite_quote_id")
+r.r=typeof q=="string"?q:null
 r.x=s.c
 r.w=s.d},
 $S:0}
