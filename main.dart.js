@@ -111042,10 +111042,11 @@ case 5:o=B.b
 n=p
 m=J
 l=t.j
-k=B.M
+k=J
+j=B.M
 s=7
 return A.i($.lD().rn("assets/gacha/gacha_items.json"),$async$xX)
-case 7:o.T(n,m.kE(l.a(k.bj(0,b)),t.P))
+case 7:o.T(n,m.kE(l.a(k.Z(j.bj(0,b),"items")),t.P))
 case 6:return A.q(null,r)}})
 return A.r($async$xX,r)},
 BN(){var s=0,r=A.t(t.b5),q,p=this,o,n,m,l,k,j,i,h,g,f,e,d,c
