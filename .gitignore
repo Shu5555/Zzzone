@@ -51,4 +51,4 @@ app.*.map.json
 .env
 
 # Ignore image files
-*.png
+*.pngkey.properties 
