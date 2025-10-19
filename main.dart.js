@@ -111403,7 +111403,7 @@ return A.i(A.dh(),$async$ul)
 case 3:s=2
 return A.i(b.eM("String","dropbox_code_verifier",p),$async$ul)
 case 2:s=4
-return A.i(A.aWX(A.rd("https","www.dropbox.com","/oauth2/authorize",A.a4(["client_id","2mmltjxbcy4ijqu","response_type","code","redirect_uri","https://zzzone.app/","token_access_type","offline","code_challenge",m,"code_challenge_method","S256"],t.N,t.z)),"_self"),$async$ul)
+return A.i(A.aWX(A.rd("https","www.dropbox.com","/oauth2/authorize",A.a4(["client_id","2mmltjxbcy4ijqu","response_type","code","redirect_uri","https://shu5555.github.io/Zzzone/","token_access_type","offline","code_challenge",m,"code_challenge_method","S256"],t.N,t.z)),"_self"),$async$ul)
 case 4:if(!b)throw A.f(A.c7("Could not launch Dropbox authentication URL"))
 return A.q(null,r)}})
 return A.r($async$ul,r)},
@@ -111421,7 +111421,7 @@ if(n==null)throw A.f(A.c7("Code verifier not found in storage."))
 s=4
 return A.i(o.G(0,"dropbox_code_verifier"),$async$vh)
 case 4:s=5
-return A.i(p.xf(m,n,"https://zzzone.app/"),$async$vh)
+return A.i(p.xf(m,n,"https://shu5555.github.io/Zzzone/"),$async$vh)
 case 5:q=!0
 s=1
 break
