@@ -1,18 +1,16 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'package:path/path.dart';
+import 'package:sqflite/sqflite.dart';
+
 import '../models/sleep_record.dart';
 import '../utils/date_helper.dart';
+import 'package:sleep_management_app/services/database_helper_interface.dart';
 
-// Helper class for Gacha History
-class GachaPullRecord {
-  final String quoteId;
-  final String rarityId;
-  final DateTime pulledAt;
-  GachaPullRecord({required this.quoteId, required this.rarityId, required this.pulledAt});
-}
+import '../models/gacha_pull_record.dart';
 
-class DatabaseHelper {
+class DatabaseHelper implements IDatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
 

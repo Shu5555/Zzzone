@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:sleep_management_app/services/backup_service_web.dart';
 import '../services/backup_service.dart';
 import '../services/database_helper.dart';
 import '../services/dropbox_service.dart';
+import 'dart:html' as html;
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -14,7 +16,8 @@ class BackupScreen extends StatefulWidget {
 }
 
 class _BackupScreenState extends State<BackupScreen> {
-  final _backupService = BackupService();
+  // Conditional service initialization can be cleaner with a factory or service locator
+  final _mobileBackupService = BackupService(); 
   final _dropboxService = DropboxService();
 
   String _lastBackupDate = '確認中...';
@@ -53,41 +56,33 @@ class _BackupScreenState extends State<BackupScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _lastBackupDate = '日時の取得に失敗しました';
+          _lastBackupDate = '日時の取得に失敗しました: ${e.toString()}';
         });
       }
     }
   }
 
   Future<void> _performBackup() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('この機能はWeb版ではサポートされていません。'),
-          backgroundColor: Colors.grey,
-        ),
-      );
-      return;
-    }
-
     setState(() {
       _isBackingUp = true;
     });
 
     try {
-      // 1. Get files to back up
-      final files = await _backupService.getFilesToBackup();
-      if (files.isEmpty) {
-        throw Exception('バックアップ対象のファイルが見つかりませんでした。');
+      if (kIsWeb) {
+        // Web Backup Logic
+        final backupServiceWeb = BackupServiceWeb();
+        final jsonString = await backupServiceWeb.createBackupJson();
+        await _dropboxService.uploadBackupJson(jsonString);
+      } else {
+        // Mobile Backup Logic
+        final files = await _mobileBackupService.getFilesToBackup();
+        if (files.isEmpty) {
+          throw Exception('バックアップ対象のファイルが見つかりませんでした。');
+        }
+        final zipPath = await _mobileBackupService.createBackupZip(files);
+        await _dropboxService.uploadBackup(zipPath);
       }
 
-      // 2. Create a zip archive
-      final zipPath = await _backupService.createBackupZip(files);
-
-      // 3. Upload to Dropbox
-      await _dropboxService.uploadBackup(zipPath);
-
-      // 4. Show success message and update date
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('バックアップが正常に完了しました。')),
@@ -114,21 +109,11 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _performRestore() async {
-    if (kIsWeb) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('この機能はWeb版ではサポートされていません。'),
-          backgroundColor: Colors.grey,
-        ),
-      );
-      return;
-    }
-
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('データを復元'),
-        content: const Text('現在のローカルデータはすべて上書きされます。よろしいですか？この操作は元に戻せません。'),
+        content: const Text('現在のデータはすべて上書きされます。よろしいですか？この操作は元に戻せません。'),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('キャンセル')),
           TextButton(
@@ -146,33 +131,50 @@ class _BackupScreenState extends State<BackupScreen> {
     });
 
     try {
-      // 1. Close the local database to release file lock
-      await DatabaseHelper.instance.close();
+      if (kIsWeb) {
+        // Web Restore Logic
+        final backupServiceWeb = BackupServiceWeb();
+        final jsonString = await _dropboxService.downloadBackupJson();
+        await backupServiceWeb.restoreFromJson(jsonString);
 
-      // 2. Download the backup file
-      final zipPath = await _dropboxService.downloadBackup();
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('復元が完了しました'),
+              content: const Text('データを反映させるために、ページを再読み込みしてください。'),
+              actions: [
+                TextButton(
+                  onPressed: () => html.window.location.reload(),
+                  child: const Text('再読み込み'),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        // Mobile Restore Logic
+        await DatabaseHelper.instance.close();
+        final zipPath = await _dropboxService.downloadBackup();
+        await _mobileBackupService.restoreFromZip(zipPath);
 
-      // 3. Restore files from the zip
-      await _backupService.restoreFromZip(zipPath);
-
-      // 4. Show success and restart dialog
-      if (mounted) {
-        await showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => AlertDialog(
-            title: const Text('復元が完了しました'),
-            content: const Text('アプリを終了します。手動で再起動してデータを反映してください。'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  SystemNavigator.pop(); // Exit the app
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
+        if (mounted) {
+          await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) => AlertDialog(
+              title: const Text('復元が完了しました'),
+              content: const Text('アプリを終了します。手動で再起動してデータを反映してください。'),
+              actions: [
+                TextButton(
+                  onPressed: () => SystemNavigator.pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -210,7 +212,6 @@ class _BackupScreenState extends State<BackupScreen> {
 
     if (confirmed && mounted) {
       await _dropboxService.clearTokens();
-      // Pop back to settings screen after unlinking
       Navigator.of(context).pop();
     }
   }

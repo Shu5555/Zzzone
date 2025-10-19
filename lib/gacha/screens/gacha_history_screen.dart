@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sleep_management_app/models/gacha_pull_record.dart';
 import '../../services/database_helper.dart';
 import '../models/gacha_config.dart';
 import '../models/gacha_item.dart';

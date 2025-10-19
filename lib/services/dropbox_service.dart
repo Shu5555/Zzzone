@@ -21,7 +21,7 @@ class DropboxService {
   // --- Platform-specific Redirect URIs ---
   static const String _mobileRedirectUriScheme = 'zzzoneauth';
   static final String _mobileRedirectUri = '$_mobileRedirectUriScheme://callback';
-  static const String _webRedirectUri = 'http://localhost:5000';
+    static final String _webRedirectUri = kDebugMode ? 'http://localhost:5000' : 'https://zzzone.app/';
 
   static const String _codeVerifierKey = 'dropbox_code_verifier';
   static const String _backupFileName = '/zzzone_backup.zip';
@@ -273,6 +273,33 @@ class DropboxService {
     }
   }
 
+  /// Uploads the backup JSON string to Dropbox (for Web).
+  Future<void> uploadBackupJson(String jsonString) async {
+    final fileBytes = utf8.encode(jsonString);
+    final uri = Uri.https('content.dropboxapi.com', '/2/files/upload');
+
+    final response = await _callApiWithRetry((accessToken) {
+      return http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/octet-stream',
+          'Dropbox-API-Arg': jsonEncode({
+            'path': _backupFileName,
+            'mode': 'overwrite',
+            'autorename': false,
+            'mute': false,
+          }),
+        },
+        body: fileBytes,
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to upload backup: ${response.body}');
+    }
+  }
+
   /// Downloads the backup file from Dropbox.
   Future<String> downloadBackup() async {
     final uri = Uri.https('content.dropboxapi.com', '/2/files/download');
@@ -292,6 +319,27 @@ class DropboxService {
       final zipPath = '${tempDir.path}/$_backupFileName';
       await File(zipPath).writeAsBytes(response.bodyBytes);
       return zipPath;
+    } else {
+      throw Exception('Failed to download backup: ${response.body}');
+    }
+  }
+
+  /// Downloads the backup JSON string from Dropbox (for Web).
+  Future<String> downloadBackupJson() async {
+    final uri = Uri.https('content.dropboxapi.com', '/2/files/download');
+
+    final response = await _callApiWithRetry((accessToken) {
+      return http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Dropbox-API-Arg': jsonEncode({'path': _backupFileName}),
+        },
+      );
+    });
+
+    if (response.statusCode == 200) {
+      return utf8.decode(response.bodyBytes);
     } else {
       throw Exception('Failed to download backup: ${response.body}');
     }

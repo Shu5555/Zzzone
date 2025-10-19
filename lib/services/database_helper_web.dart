@@ -4,16 +4,12 @@ import 'package:uuid/uuid.dart';
 import '../models/sleep_record.dart';
 import '../utils/date_helper.dart';
 
-// Helper class for Gacha History
-class GachaPullRecord {
-  final String quoteId;
-  final String rarityId;
-  final DateTime pulledAt;
-  GachaPullRecord({required this.quoteId, required this.rarityId, required this.pulledAt});
-}
+import '../models/gacha_pull_record.dart';
+
+import 'package:sleep_management_app/services/database_helper_interface.dart';
 
 // Web用のインメモリデータベースヘルパー（shared_preferencesで永続化）
-class DatabaseHelper {
+class DatabaseHelper implements IDatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   DatabaseHelper._init();
 
