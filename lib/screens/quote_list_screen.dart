@@ -222,8 +222,8 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
 
               final hiraganaQuery = StringConverter.katakanaToHiragana(_searchQuery.toLowerCase());
 
-              final hiraganaText = StringConverter.katakanaToHiragana(quote.text?.toLowerCase() ?? '');
-              final hiraganaAuthor = StringConverter.katakanaToHiragana(quote.author?.toLowerCase() ?? '');
+              final hiraganaText = StringConverter.katakanaToHiragana((quote.text ?? '').toLowerCase());
+              final hiraganaAuthor = StringConverter.katakanaToHiragana((quote.author ?? '').toLowerCase());
 
               return hiraganaText.contains(hiraganaQuery) || hiraganaAuthor.contains(hiraganaQuery);
             }).toList();
@@ -259,14 +259,14 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
                     tiles: quotesInRarity.map((quote) {
                       final isFavorite = quote.id == _favoriteQuoteId;
                       return ListTile(
-                        title: Text('"${quote.text}"'),
-                        subtitle: Text('- ${quote.author}'),
+                        title: Text('"${quote.text ?? ''}"'),
+                        subtitle: Text('- ${quote.author ?? ''}'),
                         trailing: _favoriteQuoteId == 'random'
                             ? null
                             : Icon(isFavorite ? Icons.star : Icons.star_border, color: isFavorite ? Colors.amber : null),
                         onTap: _favoriteQuoteId == 'random' ? null : () => _setFavoriteQuote(quote.id),
                         onLongPress: () {
-                          final textToCopy = '"${quote.text}" - ${quote.author}';
+                          final textToCopy = '"${quote.text ?? ''}" - ${quote.author ?? ''}';
                           Clipboard.setData(ClipboardData(text: textToCopy));
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('名言をコピーしました')),
