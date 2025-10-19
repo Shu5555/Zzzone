@@ -6,7 +6,7 @@ import 'package:sleep_management_app/services/backup_service_web.dart';
 import '../services/backup_service.dart';
 import '../services/database_helper.dart';
 import '../services/dropbox_service.dart';
-import 'dart:html' as html;
+import '../utils/reload_helper.dart';
 
 class BackupScreen extends StatefulWidget {
   const BackupScreen({super.key});
@@ -146,7 +146,7 @@ class _BackupScreenState extends State<BackupScreen> {
               content: const Text('データを反映させるために、ページを再読み込みしてください。'),
               actions: [
                 TextButton(
-                  onPressed: () => html.window.location.reload(),
+                  onPressed: () => reloadPage(),
                   child: const Text('再読み込み'),
                 ),
               ],
