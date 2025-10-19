@@ -71,7 +71,8 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
     final unlockedQuotesData = results[1] as List<Map<String, dynamic>>;
 
     final allRarities = <String, GachaRarity>{};
-    final unlockedQuotes = <GachaItem>[];
+    // ▼▼▼ 重複を排除するため、Mapを使用してユニークな名言を保持 ▼▼▼
+    final uniqueQuotes = <String, GachaItem>{};
 
     for (var row in unlockedQuotesData) {
       final rarityId = row['rarityId'] as String;
@@ -86,17 +87,23 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
         );
       }
 
-      final item = GachaItem(
-        id: row['id'] as String,
-        rarityId: rarityId,
-        customData: {
-          'text': row['quote'] as String? ?? '',
-          'author': row['author'] as String? ?? '',
-        },
-      );
-      item.setRarity(allRarities[rarityId]!);
-      unlockedQuotes.add(item);
+      final itemId = row['id'] as String;
+      // すでに同じIDの名言がなければ追加
+      if (!uniqueQuotes.containsKey(itemId)) {
+        final item = GachaItem(
+          id: itemId,
+          rarityId: rarityId,
+          customData: {
+            'text': row['quote'] as String? ?? '',
+            'author': row['author'] as String? ?? '',
+          },
+        );
+        item.setRarity(allRarities[rarityId]!);
+        uniqueQuotes[itemId] = item;
+      }
     }
+
+    final unlockedQuotes = uniqueQuotes.values.toList();
     // ▲▲▲
 
     // Group quotes by rarity
