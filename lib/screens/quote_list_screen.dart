@@ -109,8 +109,9 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
     final sortedRarities = allRarities.values.toList()..sort((a, b) => b.order.compareTo(a.order));
 
     if (mounted) {
+      final dynamic favId = userProfile?['favorite_quote_id'];
       setState(() {
-        _favoriteQuoteId = userProfile?['favorite_quote_id'];
+        _favoriteQuoteId = favId is String ? favId : null;
         _groupedQuotes = grouped;
         _sortedRarities = sortedRarities;
       });
