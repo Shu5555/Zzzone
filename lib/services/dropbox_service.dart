@@ -21,7 +21,7 @@ class DropboxService {
   // --- Platform-specific Redirect URIs ---
   static const String _mobileRedirectUriScheme = 'zzzoneauth';
   static final String _mobileRedirectUri = '$_mobileRedirectUriScheme://callback';
-    static final String _webRedirectUri = kDebugMode ? 'http://localhost:5000' : 'https://zzzone.app/';
+    static final String _webRedirectUri = kDebugMode ? 'http://localhost:5000' : 'https://shu5555.github.io/Zzzone/';
 
   static const String _codeVerifierKey = 'dropbox_code_verifier';
   static const String _backupFileName = '/zzzone_backup.zip';
