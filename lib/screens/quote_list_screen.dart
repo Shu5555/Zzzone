@@ -90,8 +90,8 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
         id: row['id'] as String,
         rarityId: rarityId,
         customData: {
-          'quote': row['quote'],
-          'author': row['author'],
+          'text': row['quote'] as String? ?? '',
+          'author': row['author'] as String? ?? '',
         },
       );
       item.setRarity(allRarities[rarityId]!);
