@@ -160,28 +160,113 @@ class DropboxService {
     }
   }
 
+  Future<bool> _refreshAccessToken() async {
+    final refreshToken = await _secureStorage.read(key: 'dropbox_refresh_token');
+    if (refreshToken == null) {
+      if (kDebugMode) {
+        print('No refresh token found for renewal.');
+      }
+      return false;
+    }
+
+    final uri = Uri.https('api.dropboxapi.com', '/oauth2/token');
+    try {
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'grant_type': 'refresh_token',
+          'refresh_token': refreshToken,
+          'client_id': _appKey,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final tokenData = json.decode(response.body);
+        final newAccessToken = tokenData['access_token'];
+        if (newAccessToken != null) {
+          await _secureStorage.write(key: 'dropbox_access_token', value: newAccessToken);
+          if (kDebugMode) {
+            print('Successfully refreshed Dropbox access token.');
+          }
+          return true;
+        }
+      }
+      
+      if (kDebugMode) {
+        print('Failed to refresh access token. Status: ${response.statusCode}, Body: ${response.body}');
+      }
+      await clearTokens();
+      return false;
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error during access token refresh: $e');
+      }
+      await clearTokens();
+      return false;
+    }
+  }
+
+  Future<http.Response> _callApiWithRetry(
+    Future<http.Response> Function(String accessToken) apiCall,
+  ) async {
+    var accessToken = await getAccessToken();
+    if (accessToken == null) {
+      throw Exception('Not authenticated with Dropbox.');
+    }
+
+    var response = await apiCall(accessToken);
+
+    if (response.statusCode == 401) {
+      try {
+        final errorBody = json.decode(response.body);
+        if (errorBody['error_summary']?.startsWith('expired_access_token') ?? false) {
+          if (kDebugMode) {
+            print('Dropbox access token expired. Attempting to refresh...');
+          }
+          final refreshed = await _refreshAccessToken();
+          if (refreshed) {
+            accessToken = await getAccessToken();
+            if (accessToken == null) {
+              throw Exception('Failed to get new access token after refresh.');
+            }
+            if (kDebugMode) {
+              print('Retrying API call with new token...');
+            }
+            response = await apiCall(accessToken);
+          } else {
+            throw Exception('Failed to refresh token. Please re-authenticate.');
+          }
+        }
+      } catch (e) {
+        // Error parsing the body, or some other issue. Re-throw the original response's error.
+        throw Exception('Dropbox API Error: ${response.statusCode}, Body: ${response.body}');
+      }
+    }
+    return response;
+  }
+
   /// Uploads the backup file to Dropbox.
   Future<void> uploadBackup(String zipPath) async {
-    final accessToken = await getAccessToken();
-    if (accessToken == null) throw Exception('Not authenticated with Dropbox.');
-
     final fileBytes = await File(zipPath).readAsBytes();
     final uri = Uri.https('content.dropboxapi.com', '/2/files/upload');
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/octet-stream',
-        'Dropbox-API-Arg': jsonEncode({
-          'path': _backupFileName,
-          'mode': 'overwrite',
-          'autorename': false,
-          'mute': false,
-        }),
-      },
-      body: fileBytes,
-    );
+    final response = await _callApiWithRetry((accessToken) {
+      return http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/octet-stream',
+          'Dropbox-API-Arg': jsonEncode({
+            'path': _backupFileName,
+            'mode': 'overwrite',
+            'autorename': false,
+            'mute': false,
+          }),
+        },
+        body: fileBytes,
+      );
+    });
 
     if (response.statusCode != 200) {
       throw Exception('Failed to upload backup: ${response.body}');
@@ -190,18 +275,17 @@ class DropboxService {
 
   /// Downloads the backup file from Dropbox.
   Future<String> downloadBackup() async {
-    final accessToken = await getAccessToken();
-    if (accessToken == null) throw Exception('Not authenticated with Dropbox.');
-
     final uri = Uri.https('content.dropboxapi.com', '/2/files/download');
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Dropbox-API-Arg': jsonEncode({'path': _backupFileName}),
-      },
-    );
+    final response = await _callApiWithRetry((accessToken) {
+      return http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Dropbox-API-Arg': jsonEncode({'path': _backupFileName}),
+        },
+      );
+    });
 
     if (response.statusCode == 200) {
       final tempDir = await getTemporaryDirectory();
@@ -215,19 +299,18 @@ class DropboxService {
 
   /// Fetches metadata for the backup file.
   Future<Map<String, dynamic>?> getLatestBackupInfo() async {
-    final accessToken = await getAccessToken();
-    if (accessToken == null) throw Exception('Not authenticated with Dropbox.');
-
     final uri = Uri.https('api.dropboxapi.com', '/2/files/get_metadata');
 
-    final response = await http.post(
-      uri,
-      headers: {
-        'Authorization': 'Bearer $accessToken',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({'path': _backupFileName}),
-    );
+    final response = await _callApiWithRetry((accessToken) {
+      return http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'path': _backupFileName}),
+      );
+    });
 
     if (response.statusCode == 200) {
       return jsonDecode(response.body) as Map<String, dynamic>;
