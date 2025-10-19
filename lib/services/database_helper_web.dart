@@ -372,6 +372,30 @@ class DatabaseHelper implements IDatabaseHelper {
     return _readAnnouncements;
   }
 
+  Future<int> deleteAllUnlockedQuotes() async {
+    await _ensureInitialized();
+    final count = _unlockedQuotes.length;
+    _unlockedQuotes.clear();
+    await _persistUnlockedQuotes();
+    return count;
+  }
+
+  Future<int> deleteAllGachaHistory() async {
+    await _ensureInitialized();
+    final count = _gachaHistory.length;
+    _gachaHistory.clear();
+    await _persistGachaHistory();
+    return count;
+  }
+
+  Future<int> deleteAllReadAnnouncements() async {
+    await _ensureInitialized();
+    final count = _readAnnouncements.length;
+    _readAnnouncements.clear();
+    await _persistReadAnnouncements();
+    return count;
+  }
+
   Future close() async {
     // No-op for web
   }

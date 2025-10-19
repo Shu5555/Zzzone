@@ -76,7 +76,9 @@ class BackupServiceWeb {
     // The test only verifies deleteAllRecords, but we should clear all tables.
     // For now, we stick to what the test expects.
     await _dbHelper.deleteAllRecords();
-    // TODO: Add deleteAll for other tables and call them here.
+    await _dbHelper.deleteAllUnlockedQuotes();
+    await _dbHelper.deleteAllGachaHistory();
+    await _dbHelper.deleteAllReadAnnouncements();
 
     final sleepRecords = backupData['sleep_records'] as List<dynamic>?;
     if (sleepRecords != null) {

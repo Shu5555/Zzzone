@@ -392,6 +392,21 @@ CREATE TABLE read_announcements (
     return result.map((row) => row['id'] as String).toSet();
   }
 
+  Future<int> deleteAllUnlockedQuotes() async {
+    final db = await instance.database;
+    return await db.delete('unlocked_quotes');
+  }
+
+  Future<int> deleteAllGachaHistory() async {
+    final db = await instance.database;
+    return await db.delete('gacha_pull_history');
+  }
+
+  Future<int> deleteAllReadAnnouncements() async {
+    final db = await instance.database;
+    return await db.delete('read_announcements');
+  }
+
   Future close() async {
     final db = await instance.database;
     db.close();

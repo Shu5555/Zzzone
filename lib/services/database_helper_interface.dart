@@ -19,5 +19,8 @@ abstract class IDatabaseHelper {
   Future<List<GachaPullRecord>> getGachaHistory();
   Future<void> markAnnouncementsAsRead(List<String> announcementIds);
   Future<Set<String>> getReadAnnouncementIds();
+  Future<int> deleteAllUnlockedQuotes();
+  Future<int> deleteAllGachaHistory();
+  Future<int> deleteAllReadAnnouncements();
   Future<void> close();
 }
