@@ -181,6 +181,40 @@ class _BackupScreenState extends State<BackupScreen> {
     }
   }
 
+  Future<void> _showDeleteBackupDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('バックアップを削除'),
+        content: const Text('Dropboxに保存されているバックアップファイルを削除します。よろしいですか？この操作は元に戻せません。'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('キャンセル')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('削除する', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    ) ?? false;
+
+    if (confirmed && mounted) {
+      try {
+        await _dropboxService.deleteBackup();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('バックアップを削除しました。')),
+        );
+        await _loadLastBackupDate();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('バックアップの削除に失敗しました: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isLoading = _isBackingUp || _isRestoring;
@@ -246,6 +280,15 @@ class _BackupScreenState extends State<BackupScreen> {
                 style: TextStyle(color: Colors.redAccent),
               ),
               onTap: _showDropboxUnlinkDialog,
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.delete_forever, color: Colors.redAccent),
+              title: const Text(
+                'Dropbox上のバックアップを削除',
+                style: TextStyle(color: Colors.redAccent),
+              ),
+              onTap: _showDeleteBackupDialog,
             ),
             const Divider(),
           ],

@@ -369,6 +369,26 @@ class DropboxService {
     }
   }
 
+  /// Deletes the backup file from Dropbox.
+  Future<void> deleteBackup() async {
+    final uri = Uri.https('api.dropboxapi.com', '/2/files/delete_v2');
+
+    final response = await _callApiWithRetry((accessToken) {
+      return http.post(
+        uri,
+        headers: {
+          'Authorization': 'Bearer $accessToken',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'path': _backupFileName}),
+      );
+    });
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to delete backup: ${response.body}');
+    }
+  }
+
   String _generateCodeVerifier() {
     final random = Random.secure();
     final bytes = List<int>.generate(32, (_) => random.nextInt(256));
