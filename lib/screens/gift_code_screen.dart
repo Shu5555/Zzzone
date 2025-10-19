@@ -37,48 +37,16 @@ class _GiftCodeScreenState extends State<GiftCodeScreen> {
         _isLoading = false;
       });
 
-      // 結果に応じたメッセージを表示
-      final message = _getDisplayMessage(result);
+      // 結果をSnackBarで表示
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(result.message), // サーバーからのメッセージを直接表示
           backgroundColor: result.success ? Colors.green : Colors.red,
         ),
       );
 
       if (result.success) {
          _codeController.clear();
-      }
-    }
-  }
-
-  // バックエンドからのメッセージを分かりやすい日本語に変換
-  String _getDisplayMessage(GiftCodeResult result) {
-    if (result.success) {
-      switch (result.rewardType) {
-        case 'sleep_coins':
-          return '${result.rewardValue}コインを獲得しました！';
-        case 'ultra_rare_ticket':
-          return '超激レア確定ガチャチケットを${result.rewardValue}枚獲得しました！';
-        default:
-          return '報酬を受け取りました！';
-      }
-    } else {
-      switch (result.message) {
-        case 'code_not_found':
-          return '無効なコードです。';
-        case 'code_expired':
-          return 'このコードの有効期限は切れています。';
-        case 'code_max_uses_reached':
-          return 'このコードは上限回数まで使用されています。';
-        case 'code_already_redeemed':
-          return 'このコードは既に使用済みです。';
-        case 'user_id_not_found':
-          return 'エラーが発生しました。プロフィール設定を完了してください。';
-        case 'not_authenticated':
-           return 'エラーが発生しました。再ログインしてお試しください。';
-        default:
-          return 'エラーが発生しました。コードを確認して再度お試しください。';
       }
     }
   }

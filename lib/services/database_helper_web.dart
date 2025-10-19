@@ -1,12 +1,13 @@
 import 'dart:convert';
+
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
-import '../models/sleep_record.dart';
-import '../utils/date_helper.dart';
 
 import '../models/gacha_pull_record.dart';
-
-import 'package:sleep_management_app/services/database_helper_interface.dart';
+import '../models/sleep_record.dart';
+import '../utils/date_helper.dart';
+import 'database_helper_interface.dart';
 
 // Web用のインメモリデータベースヘルパー（shared_preferencesで永続化）
 class DatabaseHelper implements IDatabaseHelper {
@@ -17,7 +18,11 @@ class DatabaseHelper implements IDatabaseHelper {
   final List<SleepRecord> _inMemoryDb = [];
   final List<String> _unlockedQuotes = [];
   final List<Map<String, String>> _gachaHistory = [];
-  final Set<String> _readAnnouncements = {}; // New
+  final Set<String> _readAnnouncements = {};
+  // ▼▼▼ 新しいデータストア ▼▼▼
+  final List<Map<String, dynamic>> _rarities = [];
+  final List<Map<String, dynamic>> _quotes = [];
+  // ▲▲▲
   bool _isInitialized = false;
 
   // SharedPreferences keys
@@ -25,7 +30,7 @@ class DatabaseHelper implements IDatabaseHelper {
   static const _kSleepRecordsKeyV1 = 'sleep_records_json';
   static const _kUnlockedQuotesKey = 'unlocked_quotes_json';
   static const _kGachaHistoryKey = 'gacha_history_json';
-  static const _kReadAnnouncementsKey = 'read_announcements_json'; // New
+  static const _kReadAnnouncementsKey = 'read_announcements_json';
 
   Future<dynamic> get database async {
     await _ensureInitialized();
@@ -36,14 +41,71 @@ class DatabaseHelper implements IDatabaseHelper {
     if (_isInitialized) return;
 
     final prefs = await SharedPreferences.getInstance();
-    
+
     _loadSleepRecords(prefs);
     _loadUnlockedQuotes(prefs);
     _loadGachaHistory(prefs);
-    _loadReadAnnouncements(prefs); // New
+    _loadReadAnnouncements(prefs);
+
+    // ▼▼▼ 新しいデータ投入処理 ▼▼▼
+    await _populateGachaDataFromAssets();
+    // ▲▲▲
 
     _isInitialized = true;
   }
+
+  // ▼▼▼ ここからが新しいコード ▼▼▼
+
+  Future<void> _populateGachaDataFromAssets() async {
+    if (_rarities.isEmpty) {
+      final String configJsonString = await rootBundle.loadString('assets/gacha/gacha_config.json');
+      final configData = json.decode(configJsonString);
+      final raritiesData = configData['rarities'] as List;
+      _rarities.addAll(raritiesData.cast<Map<String, dynamic>>());
+    }
+
+    if (_quotes.isEmpty) {
+      final String itemsJsonString = await rootBundle.loadString('assets/gacha/gacha_items.json');
+      final itemsData = json.decode(itemsJsonString) as List;
+      _quotes.addAll(itemsData.cast<Map<String, dynamic>>());
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getUnlockedQuotesWithDetails() async {
+    await _ensureInitialized();
+
+    final unlockedQuoteIdSet = _unlockedQuotes.toSet();
+    final rarityMap = {for (var r in _rarities) r['id']: r};
+
+    final List<Map<String, dynamic>> result = [];
+
+    for (var quote in _quotes) {
+      if (unlockedQuoteIdSet.contains(quote['id'])) {
+        final rarity = rarityMap[quote['rarityId']];
+        if (rarity != null) {
+          result.add({
+            'id': quote['id'],
+            'quote': quote['quote'],
+            'author': quote['author'],
+            'rarityId': rarity['id'],
+            'rarityName': rarity['name'],
+            'rarityColor': rarity['color'],
+            'rarityOrder': rarity['order'],
+          });
+        }
+      }
+    }
+
+    result.sort((a, b) {
+      int orderCompare = (b['rarityOrder'] as int).compareTo(a['rarityOrder'] as int);
+      if (orderCompare != 0) return orderCompare;
+      return (a['author'] as String).compareTo(b['author'] as String);
+    });
+
+    return result;
+  }
+
+  // ▲▲▲ ここまでが新しいコード ▲▲▲
 
   void _loadSleepRecords(SharedPreferences prefs) {
     String? jsonString = prefs.getString(_kSleepRecordsKeyV2);

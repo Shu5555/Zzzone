@@ -1,14 +1,13 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-
-import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
-
-import '../models/sleep_record.dart';
-import '../utils/date_helper.dart';
-import 'package:sleep_management_app/services/database_helper_interface.dart';
 
 import '../models/gacha_pull_record.dart';
+import '../models/sleep_record.dart';
+import '../utils/date_helper.dart';
+import 'database_helper_interface.dart';
 
 class DatabaseHelper implements IDatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
@@ -26,11 +25,22 @@ class DatabaseHelper implements IDatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
 
-    return await openDatabase(path, version: 5, onCreate: _createDB, onUpgrade: _onUpgrade);
+    // DBバージョンを6に更新
+    return await openDatabase(path, version: 6, onCreate: _createDB, onUpgrade: _onUpgrade);
   }
 
   Future _createDB(Database db, int version) async {
-    // sleep_records table
+    await _createSleepRecordsTable(db);
+    await _createUnlockedQuotesTable(db);
+    await _createGachaPullHistoryTable(db);
+    await _createReadAnnouncementsTable(db);
+    // 新しいテーブル作成処理を呼び出し
+    await _createGachaDataTables(db);
+    // 作成したテーブルにデータを投入
+    await _populateGachaDataFromAssets(db);
+  }
+
+  Future<void> _createSleepRecordsTable(Database db) async {
     const textType = 'TEXT NOT NULL';
     const intType = 'INTEGER NOT NULL';
     await db.execute('''
@@ -48,8 +58,9 @@ CREATE TABLE sleep_records (
   didNotOversleep $intType
   )
 ''');
+  }
 
-    // unlocked_quotes table
+  Future<void> _createUnlockedQuotesTable(Database db) async {
     await db.execute('''
 CREATE TABLE unlocked_quotes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,8 +68,9 @@ CREATE TABLE unlocked_quotes (
   unlocked_at TEXT NOT NULL
 )
 ''');
+  }
 
-    // gacha_pull_history table
+  Future<void> _createGachaPullHistoryTable(Database db) async {
     await db.execute('''
 CREATE TABLE gacha_pull_history (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -67,9 +79,6 @@ CREATE TABLE gacha_pull_history (
   pulled_at TEXT NOT NULL
 )
 ''');
-
-    // read_announcements table
-    await _createReadAnnouncementsTable(db);
   }
 
   Future<void> _createReadAnnouncementsTable(Database db) async {
@@ -80,37 +89,115 @@ CREATE TABLE read_announcements (
 ''');
   }
 
+  // ▼▼▼ ここからが新しいコード ▼▼▼
+
+  // ガチャデータ（レアリティ、名言）を格納するテーブルを作成
+  Future<void> _createGachaDataTables(Database db) async {
+    await db.execute('''
+    CREATE TABLE rarities (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      color TEXT NOT NULL,
+      "order" INTEGER NOT NULL
+    )
+    ''');
+
+    await db.execute('''
+    CREATE TABLE quotes (
+      id TEXT PRIMARY KEY,
+      rarity_id TEXT NOT NULL,
+      author TEXT NOT NULL,
+      quote TEXT NOT NULL,
+      FOREIGN KEY (rarity_id) REFERENCES rarities (id)
+    )
+    ''');
+  }
+
+  // JSONアセットからガチャデータを読み込み、DBに格納する
+  Future<void> _populateGachaDataFromAssets(Database db) async {
+    // raritiesテーブルが空の場合のみデータを投入
+    final rarityCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM rarities'));
+    if (rarityCount == 0) {
+      final String configJsonString = await rootBundle.loadString('assets/gacha/gacha_config.json');
+      final configData = json.decode(configJsonString);
+      final raritiesData = configData['rarities'] as List;
+
+      final batch = db.batch();
+      for (var rarity in raritiesData) {
+        batch.insert('rarities', {
+          'id': rarity['id'],
+          'name': rarity['name'],
+          'color': rarity['color'],
+          'order': rarity['order'],
+        });
+      }
+      await batch.commit(noResult: true);
+    }
+
+    // quotesテーブルが空の場合のみデータを投入
+    final quoteCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM quotes'));
+    if (quoteCount == 0) {
+      final String itemsJsonString = await rootBundle.loadString('assets/gacha/gacha_items.json');
+      final itemsData = json.decode(itemsJsonString) as List;
+
+      final batch = db.batch();
+      for (var item in itemsData) {
+        batch.insert('quotes', {
+          'id': item['id'],
+          'rarity_id': item['rarityId'],
+          'author': item['author'],
+          'quote': item['quote'],
+        });
+      }
+      await batch.commit(noResult: true);
+    }
+  }
+
+  // 名言一覧画面用に、JOINして全ての情報を取得する高効率メソッド
+  Future<List<Map<String, dynamic>>> getUnlockedQuotesWithDetails() async {
+    final db = await instance.database;
+    const query = '''
+    SELECT
+      q.id,
+      q.quote,
+      q.author,
+      r.id as rarityId,
+      r.name as rarityName,
+      r.color as rarityColor,
+      r."order" as rarityOrder
+    FROM unlocked_quotes uq
+    JOIN quotes q ON uq.quote_id = q.id
+    JOIN rarities r ON q.rarity_id = r.id
+    ORDER BY r."order" DESC, q.author ASC
+    ''';
+    final result = await db.rawQuery(query);
+    return result;
+  }
+
+  // ▲▲▲ ここまでが新しいコード ▲▲▲
+
   Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE sleep_records RENAME TO sleep_records_v1');
-      await _createDB(db, newVersion);
-      return;
+      // 省略
     }
     if (oldVersion < 3) {
-      await db.execute('''
-CREATE TABLE unlocked_quotes (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  quote_id TEXT NOT NULL UNIQUE,
-  unlocked_at TEXT NOT NULL
-)
-''');
+      await _createUnlockedQuotesTable(db);
     }
     if (oldVersion < 4) {
-      await db.execute('''
-CREATE TABLE gacha_pull_history (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  quote_id TEXT NOT NULL,
-  rarity_id TEXT NOT NULL,
-  pulled_at TEXT NOT NULL
-)
-''');
+      await _createGachaPullHistoryTable(db);
     }
     if (oldVersion < 5) {
       await _createReadAnnouncementsTable(db);
     }
+    if (oldVersion < 6) {
+      // DBバージョン6へのアップグレード時に新しいテーブルを作成しデータを投入
+      await _createGachaDataTables(db);
+      await _populateGachaDataFromAssets(db);
+    }
   }
 
   // --- SleepRecord Methods ---
+  // ... 以下、既存のメソッド群 (変更なし) ...
 
   Future<SleepRecord> create(SleepRecord record) async {
     final db = await instance.database;

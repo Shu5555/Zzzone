@@ -61,28 +61,43 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
       throw Exception('ユーザーIDが見つかりません。ランキングへの参加が必要です。');
     }
 
-    // Load all necessary data in parallel
+    // ▼▼▼ データ取得処理を新しい高効率なメソッドに置き換え ▼▼▼
     final results = await Future.wait([
-      GachaDataLoader.loadItems('assets/gacha/gacha_items.json'),
-      GachaDataLoader.loadConfig('assets/gacha/gacha_config.json'),
       _supabaseService.getUser(_userId!),
-      DatabaseHelper.instance.getUnlockedQuoteIds(),
+      DatabaseHelper.instance.getUnlockedQuotesWithDetails(),
     ]);
 
-    final allItems = results[0] as List<GachaItem>;
-    final config = results[1] as GachaConfig;
-    final userProfile = results[2] as Map<String, dynamic>?;
-    final unlockedQuoteIds = results[3] as List<String>;
+    final userProfile = results[0] as Map<String, dynamic>?;
+    final unlockedQuotesData = results[1] as List<Map<String, dynamic>>;
 
-    // Attach rarity info to each item
-    for (var item in allItems) {
-      final rarity = config.rarities.firstWhere((r) => r.id == item.rarityId, orElse: () => config.rarities.first);
-      item.setRarity(rarity);
+    final allRarities = <String, GachaRarity>{};
+    final unlockedQuotes = <GachaItem>[];
+
+    for (var row in unlockedQuotesData) {
+      final rarityId = row['rarityId'] as String;
+      if (!allRarities.containsKey(rarityId)) {
+        final hexColor = (row['rarityColor'] as String).replaceAll('#', '');
+        allRarities[rarityId] = GachaRarity(
+          id: rarityId,
+          name: row['rarityName'] as String,
+          color: Color(int.parse('FF$hexColor', radix: 16)),
+          order: row['rarityOrder'] as int,
+          probability: 0, // This value is not used in this screen
+        );
+      }
+
+      final item = GachaItem(
+        id: row['id'] as String,
+        rarityId: rarityId,
+        customData: {
+          'quote': row['quote'],
+          'author': row['author'],
+        },
+      );
+      item.setRarity(allRarities[rarityId]!);
+      unlockedQuotes.add(item);
     }
-
-    // For performance optimization, convert the list to a Set for O(1) lookups.
-    final unlockedQuoteIdSet = unlockedQuoteIds.toSet();
-    final unlockedQuotes = allItems.where((item) => unlockedQuoteIdSet.contains(item.id)).toList();
+    // ▲▲▲
 
     // Group quotes by rarity
     final grouped = <String, List<GachaItem>>{};
@@ -91,7 +106,7 @@ class _QuoteListScreenState extends State<QuoteListScreen> {
     }
 
     // Sort rarities by order (descending)
-    final sortedRarities = List<GachaRarity>.from(config.rarities)..sort((a, b) => b.order.compareTo(a.order));
+    final sortedRarities = allRarities.values.toList()..sort((a, b) => b.order.compareTo(a.order));
 
     if (mounted) {
       setState(() {
