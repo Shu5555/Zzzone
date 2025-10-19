@@ -138,15 +138,16 @@ CREATE TABLE read_announcements (
     final quoteCount = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM quotes'));
     if (quoteCount == 0) {
       final String itemsJsonString = await rootBundle.loadString('assets/gacha/gacha_items.json');
-      final itemsData = json.decode(itemsJsonString) as List;
+      final itemsData = json.decode(itemsJsonString);
+      final quotesData = itemsData['items'] as List;
 
       final batch = db.batch();
-      for (var item in itemsData) {
+      for (var item in quotesData) {
         batch.insert('quotes', {
           'id': item['id'],
           'rarity_id': item['rarityId'],
-          'author': item['author'],
-          'quote': item['quote'],
+          'author': item['customData']['author'],
+          'quote': item['customData']['text'],
         });
       }
       await batch.commit(noResult: true);

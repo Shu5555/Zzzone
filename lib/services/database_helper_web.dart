@@ -60,14 +60,17 @@ class DatabaseHelper implements IDatabaseHelper {
     if (_rarities.isEmpty) {
       final String configJsonString = await rootBundle.loadString('assets/gacha/gacha_config.json');
       final configData = json.decode(configJsonString);
+      // 'rarities' キーからリストを抽出
       final raritiesData = configData['rarities'] as List;
       _rarities.addAll(raritiesData.cast<Map<String, dynamic>>());
     }
 
     if (_quotes.isEmpty) {
       final String itemsJsonString = await rootBundle.loadString('assets/gacha/gacha_items.json');
-      final itemsData = json.decode(itemsJsonString) as List;
-      _quotes.addAll(itemsData.cast<Map<String, dynamic>>());
+      final itemsData = json.decode(itemsJsonString);
+      // 'items' キーからリストを抽出
+      final quotesData = itemsData['items'] as List;
+      _quotes.addAll(quotesData.cast<Map<String, dynamic>>());
     }
   }
 
