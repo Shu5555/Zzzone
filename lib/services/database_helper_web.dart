@@ -88,8 +88,8 @@ class DatabaseHelper implements IDatabaseHelper {
         if (rarity != null) {
           result.add({
             'id': quote['id'],
-            'quote': quote['quote'],
-            'author': quote['author'],
+            'quote': quote['customData']['text'],
+            'author': quote['customData']['author'],
             'rarityId': rarity['id'],
             'rarityName': rarity['name'],
             'rarityColor': rarity['color'],
