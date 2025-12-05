@@ -18,11 +18,13 @@ import 'settings_screen.dart';
 import 'shop_screen.dart';
 import 'sleep_edit_screen.dart';
 import 'announcements_screen.dart';
+import 'quiz_screen.dart';
 
 import '../services/announcement_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final SupabaseRankingService? supabaseService;
+  const HomeScreen({super.key, this.supabaseService});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -30,7 +32,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   // Services
-  final _supabaseService = SupabaseRankingService();
+  late final SupabaseRankingService _supabaseService;
   final _announcementService = AnnouncementService();
   final _weatherService = WeatherService();
 
@@ -70,6 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _supabaseService = widget.supabaseService ?? SupabaseRankingService();
     _loadData();
     _checkUnreadStatus();
     _fetchWeather();
@@ -483,6 +486,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                     ],
                   ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 20.0, bottom: 20.0), // Adjust padding
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const QuizScreen()),
+                    );
+                  },
+                  child: const Text('Zzzoneクイズ'),
                 ),
               ),
               Padding(

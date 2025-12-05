@@ -193,6 +193,30 @@ class MockIDatabaseHelper extends _i1.Mock implements _i3.IDatabaseHelper {
           as _i4.Future<Set<String>>);
 
   @override
+  _i4.Future<int> deleteAllUnlockedQuotes() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteAllUnlockedQuotes, []),
+            returnValue: _i4.Future<int>.value(0),
+          )
+          as _i4.Future<int>);
+
+  @override
+  _i4.Future<int> deleteAllGachaHistory() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteAllGachaHistory, []),
+            returnValue: _i4.Future<int>.value(0),
+          )
+          as _i4.Future<int>);
+
+  @override
+  _i4.Future<int> deleteAllReadAnnouncements() =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteAllReadAnnouncements, []),
+            returnValue: _i4.Future<int>.value(0),
+          )
+          as _i4.Future<int>);
+
+  @override
   _i4.Future<void> close() =>
       (super.noSuchMethod(
             Invocation.method(#close, []),

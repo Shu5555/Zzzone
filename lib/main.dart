@@ -10,6 +10,7 @@ import 'models/sleep_record.dart';
 import 'screens/home_screen.dart';
 import 'services/database_helper.dart';
 import 'services/dropbox_service.dart';
+import 'package:sleep_management_app/services/supabase_ranking_service.dart';
 import 'utils/date_helper.dart';
 
 Future<void> _runDataMigration() async {
@@ -18,6 +19,9 @@ Future<void> _runDataMigration() async {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables from .env file
+  await dotenv.load(fileName: ".env");
 
   // Handle Dropbox web auth callback before the app starts
   if (kIsWeb) {
@@ -50,7 +54,8 @@ Future<void> main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final SupabaseRankingService? supabaseService;
+  const MyApp({super.key, this.supabaseService});
 
   @override
   Widget build(BuildContext context) {
@@ -66,7 +71,7 @@ class MyApp extends StatelessWidget {
           brightness: Brightness.dark,
         ),
       ),
-      home: const HomeScreen(),
+      home: HomeScreen(supabaseService: supabaseService),
     );
   }
 }
