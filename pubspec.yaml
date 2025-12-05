@@ -92,7 +92,7 @@ flutter:
     - assets/gacha/three_gacha_scene.html
     - assets/persona_definitions.json
     - assets/persona_display_names.json
-    - .env
+    - assets/.env
 
   fonts:
     - family: MPLUSRounded1c
