@@ -32151,7 +32151,7 @@ var $async$CA=A.o(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:if($.af==null)A.aC0()
 $.af.toString
 s=2
-return A.i($.aWX().AX(0,"assets/.env"),$async$CA)
+return A.i($.aWX().AX(0,".env"),$async$CA)
 case 2:o=A.a_F()
 s=o.gh2().ad(0,"code")?3:4
 break
