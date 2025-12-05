@@ -52,3 +52,6 @@ app.*.map.json
 
 # Ignore image files
 *.pngkey.properties 
+
+# Keystore file
+/android/key.properties
