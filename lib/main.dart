@@ -21,7 +21,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables from .env file
-  await dotenv.load(fileName: "assets/.env");
+  await dotenv.load(fileName: ".env");
 
   // Handle Dropbox web auth callback before the app starts
   if (kIsWeb) {
