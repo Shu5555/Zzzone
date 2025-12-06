@@ -18,7 +18,8 @@ class QuizService {
                 : null);
 
   static String? _getApiKey() {
-    return dotenv.env['GEMINI_API_KEY'];
+    const apiKey = String.fromEnvironment('GEMINI_API_KEY');
+    return apiKey.isEmpty ? null : apiKey;
   }
 
   // Renamed from isAvailable to reflect constructor logic
