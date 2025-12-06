@@ -2,11 +2,18 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import '../models/sleep_record.dart';
 
 class AnalysisService {
-  static final String _apiKey = const String.fromEnvironment('GEMINI_API_KEY');
+  static String get _apiKey {
+    if (kDebugMode) {
+      return dotenv.env['GEMINI_API_KEY'] ?? '';
+    } else {
+      return const String.fromEnvironment('GEMINI_API_KEY');
+    }
+  }
   static const String _apiEndpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../models/quiz_models.dart';
@@ -18,8 +19,13 @@ class QuizService {
                 : null);
 
   static String? _getApiKey() {
-    const apiKey = String.fromEnvironment('GEMINI_API_KEY');
-    return apiKey.isEmpty ? null : apiKey;
+    if (kDebugMode) {
+      final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+      return apiKey.isEmpty ? null : apiKey;
+    } else {
+      const apiKey = String.fromEnvironment('GEMINI_API_KEY');
+      return apiKey.isEmpty ? null : apiKey;
+    }
   }
 
   // Renamed from isAvailable to reflect constructor logic

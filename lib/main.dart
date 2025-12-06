@@ -20,6 +20,11 @@ Future<void> _runDataMigration() async {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Load .env file in debug mode
+  if (kDebugMode) {
+    await dotenv.load(fileName: 'assets/.env');
+  }
+
   // Handle Dropbox web auth callback before the app starts
   if (kIsWeb) {
     final uri = Uri.base;
@@ -38,9 +43,17 @@ Future<void> main() async {
 
   await initializeDateFormatting('ja_JP');
 
+  // Initialize Supabase with environment variables
+  final supabaseUrl = kDebugMode
+      ? (dotenv.env['SUPABASE_URL'] ?? '')
+      : const String.fromEnvironment('SUPABASE_URL');
+  final supabaseAnonKey = kDebugMode
+      ? (dotenv.env['SUPABASE_ANON_KEY'] ?? '')
+      : const String.fromEnvironment('SUPABASE_ANON_KEY');
+
   await Supabase.initialize(
-    url: const String.fromEnvironment('SUPABASE_URL'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY'),
+    url: supabaseUrl,
+    anonKey: supabaseAnonKey,
   );
 
   if (!kIsWeb) {
