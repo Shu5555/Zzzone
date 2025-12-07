@@ -32,9 +32,7 @@ jobs:
 
       - name: Build Flutter Web
         run: |
-          mkdir -p debug-info
           flutter build web --release --base-href /Zzzone/ \
-            --obfuscate --split-debug-info=./debug-info \
             --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
             --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
             --dart-define=GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
