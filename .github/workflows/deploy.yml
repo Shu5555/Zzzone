@@ -32,11 +32,13 @@ jobs:
 
       - name: Build Flutter Web
         run: |
-          flutter build web --release --source-maps --base-href /Zzzone/ \
-            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
-            --dart-define=SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }} \
-            --dart-define=GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }} \
-            --dart-define=OPENWEATHERMAP_API_KEY=${{ secrets.OPENWEATHERMAP_API_KEY }}
+          mkdir -p debug-info
+          flutter build web --release --base-href /Zzzone/ \
+            --obfuscate --split-debug-info=./debug-info \
+            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
+            --dart-define=SUPABASE_ANON_KEY="${{ secrets.SUPABASE_ANON_KEY }}" \
+            --dart-define=GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" \
+            --dart-define=OPENWEATHERMAP_API_KEY="${{ secrets.OPENWEATHERMAP_API_KEY }}"
 
       - name: Copy index.html to 404.html for SPA routing
         run: cp build/web/index.html build/web/404.html
