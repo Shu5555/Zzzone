@@ -44,7 +44,7 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-assets/env
+assets/.env
 
 # Ignore image files
 *.pngkey.properties 
