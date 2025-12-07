@@ -112822,7 +112822,7 @@ $S:0}
 A.vc.prototype={
 a5(){var s=null,r=s
 r=A.nk("https","generativelanguage.googleapis.com","v1beta",s)
-r=new A.akn(new A.akm(A.beR("gemini-2.5-flash"),B.a4O,s,s,new A.am2("AIzaSyDLlZP3_4cZPfGw9sNsEgG0-7G6VLuwLwU",s),r,s,s))
+r=new A.akn(new A.akm(A.beR("gemini-2.5-flash"),B.a4O,s,s,new A.am2("AIzaSyCY-Sq40IVKkdMxjanXz20yxzTPAhMvRIc",s),r,s,s))
 return new A.Mv(new A.atu(r),new A.iW(B.dy,$.an()))}}
 A.Mv.prototype={
 ag(){this.aD()
@@ -114358,7 +114358,7 @@ return A.i(n.Do(a0,a1,a2),$async$Af)
 case 7:m=a4
 e=A.ek("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",0,null)
 d=t.N
-c=A.a5(["Content-Type","application/json","X-goog-api-key","AIzaSyDLlZP3_4cZPfGw9sNsEgG0-7G6VLuwLwU"],d,d)
+c=A.a5(["Content-Type","application/json","X-goog-api-key","AIzaSyCY-Sq40IVKkdMxjanXz20yxzTPAhMvRIc"],d,d)
 s=8
 return A.i(A.lZ(e,B.K.iB(A.a5(["contents",A.b([A.a5(["parts",A.b([A.a5(["text",m],d,d)],t.m0)],d,t.xW)],t.Ud)],d,t.pQ),null),null,c).IU(0,B.UX),$async$Af)
 case 8:l=a4
