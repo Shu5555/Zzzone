@@ -27,6 +27,9 @@ jobs:
         run: flutter pub get
 
 
+      - name: Create dummy assets/env
+        run: touch assets/env
+
       - name: Build Flutter Web
         run: |
           flutter build web --release --source-maps --base-href /Zzzone/ \
