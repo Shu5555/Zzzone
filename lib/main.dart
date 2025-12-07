@@ -22,7 +22,7 @@ Future<void> main() async {
 
   // Load .env file in debug mode
   if (kDebugMode) {
-    await dotenv.load(fileName: 'assets/env');
+    await dotenv.load(fileName: 'assets/.env');
   }
 
   // Handle Dropbox web auth callback before the app starts

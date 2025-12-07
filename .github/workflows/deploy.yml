@@ -27,8 +27,8 @@ jobs:
         run: flutter pub get
 
 
-      - name: Create dummy assets/env
-        run: touch assets/env
+      - name: Create dummy assets/.env
+        run: touch assets/.env
 
       - name: Build Flutter Web
         run: |
