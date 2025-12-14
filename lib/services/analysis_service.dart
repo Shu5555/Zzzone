@@ -4,16 +4,23 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/sleep_record.dart';
 
 class AnalysisService {
   static String get _apiKey {
+    // Web版ではAPIキーを使用しない（Edge Function経由でアクセス）
+    if (kIsWeb) {
+      return '';
+    }
+    
     if (kDebugMode) {
       return dotenv.env['GEMINI_API_KEY'] ?? '';
     } else {
       return const String.fromEnvironment('GEMINI_API_KEY');
     }
   }
+  
   static const String _apiEndpoint =
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
 
@@ -94,24 +101,47 @@ $dataText
     try {
       final prompt = await _createPrompt(records, aiTone, aiGender);
 
-      final response = await http
-          .post(
-            Uri.parse(_apiEndpoint),
-            headers: {
-              'Content-Type': 'application/json',
-              'X-goog-api-key': _apiKey,
-            },
-            body: jsonEncode({
-              'contents': [
-                {
-                  'parts': [
-                    {'text': prompt}
-                  ]
-                }
-              ]
-            }),
-          )
-          .timeout(_timeoutDuration);
+      http.Response response;
+
+      if (kIsWeb) {
+        // Web版: Supabase Edge Function経由で呼び出し
+        // Supabase Edge FunctionのURLを構築
+        final supabaseClient = Supabase.instance.client;
+        final edgeFunctionUrl = '${supabaseClient.restUrl.replaceAll('/rest/v1', '')}/functions/v1/gemini-proxy';
+
+        response = await http
+            .post(
+              Uri.parse(edgeFunctionUrl),
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: jsonEncode({
+                'prompt': prompt,
+                'modelType': 'pro',
+              }),
+            )
+            .timeout(_timeoutDuration);
+      } else {
+        // モバイル版: 直接Gemini APIを呼び出し
+        response = await http
+            .post(
+              Uri.parse(_apiEndpoint),
+              headers: {
+                'Content-Type': 'application/json',
+                'X-goog-api-key': _apiKey,
+              },
+              body: jsonEncode({
+                'contents': [
+                  {
+                    'parts': [
+                      {'text': prompt}
+                    ]
+                  }
+                ]
+              }),
+            )
+            .timeout(_timeoutDuration);
+      }
 
       if (response.statusCode == 200) {
         final decodedBody = utf8.decode(response.bodyBytes);

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart'; // Import flutter_markdown_plus
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/quiz_models.dart';
 import '../services/quiz_service.dart';
+import '../services/supabase_ranking_service.dart';
 
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key});
@@ -14,6 +16,7 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   final QuizService _quizService = QuizService();
+  final SupabaseRankingService _rankingService = SupabaseRankingService();
   final TextEditingController _answerController = TextEditingController();
 
   bool _isLoading = false;
@@ -130,6 +133,30 @@ class _QuizScreenState extends State<QuizScreen> {
       setState(() {
         _quizResult = result;
       });
+
+      if (result.isCorrect) {
+        try {
+          String? userId = Supabase.instance.client.auth.currentUser?.id;
+
+          if (userId == null) {
+             final prefs = await SharedPreferences.getInstance();
+             userId = prefs.getString('userId');
+          }
+          
+          if (userId != null) {
+            await _rankingService.updateSleepCoins(userId: userId, coinsToAdd: 100);
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('正解！ 100 スリープコインを獲得しました！')),
+              );
+            }
+          }
+        } catch (e) {
+          debugPrint('Error awarding coins: $e');
+          // Optionally show an error message to the user, but keep quiz flow intact
+        }
+      }
     } catch (e) {
       setState(() {
         _error = e.toString();

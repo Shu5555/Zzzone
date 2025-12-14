@@ -2,23 +2,17 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/quiz_models.dart';
-import 'generative_model_interface.dart';
-import 'generative_model_adapter.dart';
 
 class QuizService {
-  final IGenerativeModel? _generativeModel;
-
-  QuizService({IGenerativeModel? generativeModel})
-      : _generativeModel = generativeModel ??
-            (_getApiKey() != null
-                ? GenerativeModelAdapter(
-                    GenerativeModel(
-                        model: 'gemini-2.5-flash', apiKey: _getApiKey()!))
-                : null);
-
   static String? _getApiKey() {
+    // Web版ではAPIキーを使用しない（Edge Function経由でアクセス）
+    if (kIsWeb) {
+      return null;
+    }
+    
     if (kDebugMode) {
       final apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
       return apiKey.isEmpty ? null : apiKey;
@@ -28,29 +22,82 @@ class QuizService {
     }
   }
 
-  // Renamed from isAvailable to reflect constructor logic
+  // Web版では常にtrue（Edge Function経由で利用可能）
+  // モバイル版ではAPIキーがあればtrue
   bool isModelReady() {
-    return _generativeModel != null;
+    return kIsWeb || _getApiKey() != null;
   }
 
-
   Future<String> getDailyQuiz() async {
-    if (!isModelReady()) {
+    if (!isModelReady() && !kIsWeb) {
       throw Exception('AIモデルが準備できていません。APIキーが設定されているか確認してください。');
     }
 
     try {
-      final prompt = [
-        Content.text(
+      final prompt = 
           'あなたは睡眠に関する知識が豊富な専門家です。'
           'ユーザーの睡眠改善に役立つ、面白くてためになるクイズを1問だけ作成してください。'
           '形式は問題文のみのシンプルなテキストで、選択肢は含めないでください'
+          'ただし、複数回答を求めず、回答が1つだけであることを確認してください'
           'また、毎日違う問題になるように、以下の日付情報を考慮してください。\n'
-          '今日の日付: ${DateTime.now().toIso8601String()}'
-        )
-      ];
-      final quizQuestion = await _generativeModel!.generateContent(prompt);
-      return quizQuestion ?? 'クイズの生成に失敗しました。';
+          '今日の日付: ${DateTime.now().toIso8601String()}';
+      
+      String responseText;
+
+      if (kIsWeb) {
+        // Web版: Supabase Edge Function経由で呼び出し
+        // Supabase Edge FunctionのURLを構築
+        final supabaseClient = Supabase.instance.client;
+        final edgeFunctionUrl = '${supabaseClient.restUrl.replaceAll('/rest/v1', '')}/functions/v1/gemini-proxy';
+
+        final response = await http.post(
+          Uri.parse(edgeFunctionUrl),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'prompt': prompt,
+            'modelType': 'flash',
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('クイズの生成に失敗しました: ${response.statusCode}');
+        }
+
+        final jsonResult = jsonDecode(response.body);
+        responseText = jsonResult['candidates'][0]['content']['parts'][0]['text'] as String;
+      } else {
+        // モバイル版: 直接Gemini APIを呼び出し
+        final apiKey = _getApiKey()!;
+        final apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+        final response = await http.post(
+          Uri.parse(apiEndpoint),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': apiKey,
+          },
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': prompt}
+                ]
+              }
+            ]
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('クイズの生成に失敗しました: ${response.statusCode}');
+        }
+
+        final jsonResult = jsonDecode(response.body);
+        responseText = jsonResult['candidates'][0]['content']['parts'][0]['text'] as String;
+      }
+
+      return responseText;
     } catch (e) {
       // ignore: avoid_print
       print('クイズの生成中にエラーが発生しました: $e');
@@ -59,26 +106,73 @@ class QuizService {
   }
 
   Future<QuizResult> submitAnswer(String question, String answer) async {
-    if (!isModelReady()) {
+    if (!isModelReady() && !kIsWeb) {
       throw Exception('AIモデルが準備できていません。APIキーが設定されているか確認してください。');
     }
 
     try {
-      final prompt = [
-        Content.text(
-            'あなたは睡眠の専門家です。以下のクイズとその回答について、正解かどうかを判定し、解説を生成してください。\n'
-            '回答は必ず以下のJSON形式で返してください:\n'
-            '{"isCorrect": boolean, "explanation": "string"}\n\n'
-            '## クイズ問題:\n'
-            '$question\n\n'
-            '## ユーザーの回答:\n'
-            '$answer')
-      ];
+      final prompt = 
+          'あなたは睡眠の専門家です。以下のクイズとその回答について、正解かどうかを判定し、解説を生成してください。\n'
+          '回答は必ず以下のJSON形式で返してください:\n'
+          '{"isCorrect": boolean, "explanation": "string"}\n\n'
+          '## クイズ問題:\n'
+          '$question\n\n'
+          '## ユーザーの回答:\n'
+          '$answer';
 
-      final responseText = await _generativeModel!.generateContent(prompt);
+      String responseText;
 
-      if (responseText == null) {
-        throw Exception('AIからの有効な応答がありませんでした。');
+      if (kIsWeb) {
+        // Web版: Supabase Edge Function経由で呼び出し
+        // Supabase Edge FunctionのURLを構築
+        final supabaseClient = Supabase.instance.client;
+        final edgeFunctionUrl = '${supabaseClient.restUrl.replaceAll('/rest/v1', '')}/functions/v1/gemini-proxy';
+
+        final response = await http.post(
+          Uri.parse(edgeFunctionUrl),
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'prompt': prompt,
+            'modelType': 'flash',
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('回答の送信に失敗しました: ${response.statusCode}');
+        }
+
+        final jsonResult = jsonDecode(response.body);
+        responseText = jsonResult['candidates'][0]['content']['parts'][0]['text'] as String;
+      } else {
+        // モバイル版: 直接Gemini APIを呼び出し
+        final apiKey = _getApiKey()!;
+        final apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
+        final response = await http.post(
+          Uri.parse(apiEndpoint),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-goog-api-key': apiKey,
+          },
+          body: jsonEncode({
+            'contents': [
+              {
+                'parts': [
+                  {'text': prompt}
+                ]
+              }
+            ]
+          }),
+        );
+
+        if (response.statusCode != 200) {
+          throw Exception('回答の送信に失敗しました: ${response.statusCode}');
+        }
+
+        final jsonResult = jsonDecode(response.body);
+        responseText = jsonResult['candidates'][0]['content']['parts'][0]['text'] as String;
       }
 
       // AIからの応答がマークダウンのコードブロックを含む場合があるため、それを除去する
