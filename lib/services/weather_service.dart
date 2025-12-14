@@ -36,8 +36,10 @@ class WeatherService {
 
   Future<WeatherInfo> _getWeatherViaEdgeFunction(String cityName) async {
     // Supabase Edge FunctionのURLを構築
-    final supabaseClient = Supabase.instance.client;
-    final edgeFunctionUrl = '${supabaseClient.restUrl.replaceAll('/rest/v1', '')}/functions/v1/weather-proxy';
+    final supabaseUrl = kDebugMode
+        ? (dotenv.env['SUPABASE_URL'] ?? '')
+        : const String.fromEnvironment('SUPABASE_URL');
+    final edgeFunctionUrl = '$supabaseUrl/functions/v1/weather-proxy';
 
     final uri = Uri.parse(edgeFunctionUrl).replace(
       queryParameters: {'city': cityName},
