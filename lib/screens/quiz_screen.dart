@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
@@ -20,12 +21,13 @@ class _QuizScreenState extends State<QuizScreen> {
   final TextEditingController _answerController = TextEditingController();
 
   bool _isLoading = false;
-  String? _quizQuestion;
+  Quiz? _quiz;
   QuizResult? _quizResult;
   String? _error;
   bool _isSubmitting = false;
+  bool _showHint = false;
 
-  static const String _quizQuestionKey = 'daily_quiz_question';
+  static const String _quizDataKey = 'daily_quiz_data';
   static const String _quizDateKey = 'daily_quiz_date';
   static const String _quizUserAnswerKey = 'daily_quiz_user_answer';
   static const String _quizResultIsCorrectKey = 'daily_quiz_result_is_correct';
@@ -44,13 +46,20 @@ class _QuizScreenState extends State<QuizScreen> {
     final storedDate = prefs.getString(_quizDateKey);
 
     if (storedDate == today) {
-      final storedQuestion = prefs.getString(_quizQuestionKey);
+      final storedQuizData = prefs.getString(_quizDataKey);
       final storedAnswer = prefs.getString(_quizUserAnswerKey);
       final storedResultIsCorrect = prefs.getBool(_quizResultIsCorrectKey);
       final storedResultExplanation = prefs.getString(_quizResultExplanationKey);
 
       setState(() {
-        _quizQuestion = storedQuestion;
+        if (storedQuizData != null) {
+          try {
+            final jsonData = jsonDecode(storedQuizData) as Map<String, dynamic>;
+            _quiz = Quiz.fromJson(jsonData);
+          } catch (e) {
+            debugPrint('Error parsing stored quiz data: $e');
+          }
+        }
         if (storedAnswer != null) {
           _answerController.text = storedAnswer;
         }
@@ -76,8 +85,16 @@ class _QuizScreenState extends State<QuizScreen> {
 
     // Check again in case the button is pressed on a new day without restarting the app
     if (storedDate == today) {
+      final storedQuizData = prefs.getString(_quizDataKey);
       setState(() {
-        _quizQuestion = prefs.getString(_quizQuestionKey);
+        if (storedQuizData != null) {
+          try {
+            final jsonData = jsonDecode(storedQuizData) as Map<String, dynamic>;
+            _quiz = Quiz.fromJson(jsonData);
+          } catch (e) {
+            debugPrint('Error parsing stored quiz data: $e');
+          }
+        }
         _isLoading = false;
       });
       return;
@@ -96,13 +113,14 @@ class _QuizScreenState extends State<QuizScreen> {
       await prefs.remove(_quizResultIsCorrectKey);
       await prefs.remove(_quizResultExplanationKey);
 
-      final question = await _quizService.getDailyQuiz();
-      await prefs.setString(_quizQuestionKey, question);
+      final quiz = await _quizService.getDailyQuiz();
+      await prefs.setString(_quizDataKey, jsonEncode(quiz.toJson()));
       await prefs.setString(_quizDateKey, today);
       setState(() {
-        _quizQuestion = question;
+        _quiz = quiz;
         _quizResult = null; // Reset result
         _answerController.clear(); // Clear old answer
+        _showHint = false; // Reset hint visibility
         _isLoading = false;
       });
     } catch (e) {
@@ -114,7 +132,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Future<void> _submitAnswer() async {
-    if (_answerController.text.isEmpty || _quizQuestion == null) {
+    if (_answerController.text.isEmpty || _quiz == null) {
       return;
     }
     setState(() {
@@ -122,7 +140,7 @@ class _QuizScreenState extends State<QuizScreen> {
       _error = null;
     });
     try {
-      final result = await _quizService.submitAnswer(_quizQuestion!, _answerController.text);
+      final result = await _quizService.submitAnswer(_quiz!.question, _answerController.text);
       
       // Save the answer and result to SharedPreferences
       final prefs = await SharedPreferences.getInstance();
@@ -213,7 +231,7 @@ class _QuizScreenState extends State<QuizScreen> {
     }
     
     // If quiz is not loaded yet, show "Ask Quiz" button
-    if (_quizQuestion == null) {
+    if (_quiz == null) {
       return Center(
         child: ElevatedButton(
           onPressed: _fetchQuiz,
@@ -231,21 +249,114 @@ class _QuizScreenState extends State<QuizScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('今日のクイズ', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(_quizQuestion!, style: const TextStyle(fontSize: 18)),
+          // Category Badge
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade100,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                _quiz!.category,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade800,
+                ),
+              ),
             ),
           ),
+          const SizedBox(height: 12),
+          
+          // Quiz Title
+          Text(
+            _quiz!.title,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Question Card
+          Card(
+            elevation: 2,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                _quiz!.question.replaceAll('\\n', '\n'),
+                style: const TextStyle(fontSize: 16, height: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          // Hint Section (if available)
+          if (_quiz!.hint != null && _quiz!.hint!.isNotEmpty)
+            Card(
+              color: Colors.amber.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(12.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _showHint = !_showHint;
+                        });
+                      },
+                      child: Row(
+                        children: [
+                          Icon(
+                            _showHint ? Icons.lightbulb : Icons.lightbulb_outline,
+                            color: Colors.amber.shade700,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'ヒント',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.amber.shade900,
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            _showHint ? Icons.expand_less : Icons.expand_more,
+                            color: Colors.amber.shade700,
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (_showHint) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _quiz!.hint!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.amber.shade900,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
           const SizedBox(height: 24),
+          
+          // Answer TextField
           TextField(
             controller: _answerController,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               labelText: 'あなたの回答',
+              hintText: '自由に記述してください',
             ),
+            maxLines: 3,
             enabled: _quizResult == null, // Disable after submitting
           ),
           const SizedBox(height: 24),

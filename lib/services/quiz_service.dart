@@ -28,19 +28,36 @@ class QuizService {
     return kIsWeb || _getApiKey() != null;
   }
 
-  Future<String> getDailyQuiz() async {
+  Future<Quiz> getDailyQuiz() async {
     if (!isModelReady() && !kIsWeb) {
       throw Exception('AIモデルが準備できていません。APIキーが設定されているか確認してください。');
     }
 
     try {
+      final now = DateTime.now();
       final prompt = 
-          'あなたは睡眠に関する知識が豊富な専門家です。'
-          'ユーザーの睡眠改善に役立つ、面白くてためになるクイズを1問だけ作成してください。'
-          '形式は問題文のみのシンプルなテキストで、選択肢は含めないでください'
-          'ただし、複数回答を求めず、回答が1つだけであることを確認してください'
-          'また、毎日違う問題になるように、以下の日付情報を考慮してください。\n'
-          '今日の日付: ${DateTime.now().toIso8601String()}';
+          'あなたは睡眠に関する知識が豊富な専門家です。\n'
+          'ユーザーの睡眠改善に役立つ、面白くてためになるクイズを1問だけ作成してください。\n\n'
+          '以下の厳密なJSON形式で回答してください。説明や前置き、```json ... ```のようなマークダウンは一切含めないでください。\n\n'
+          '{\n'
+          '  "title": "クイズのタイトル（15文字以内、魅力的に）",\n'
+          '  "category": "カテゴリ（例: 睡眠の質、体内時計、睡眠のメカニズム、快眠のコツ、睡眠習慣、など）",\n'
+          '  "question": "問題文（自由記述形式、200文字程度）",\n'
+          '  "hint": "ヒント（50文字以内、オプション。ヒントがない場合はnullまたは空文字）"\n'
+          '}\n\n'
+          '要件:\n'
+          '- 回答は自由記述形式（選択肢は不要）\n'
+          '- 答えは1つに絞られる問題にしてください\n'
+          '- 面白くて学びがある内容\n'
+          '- 毎日違う問題を出題してください\n'
+          '- 今日の日付: ${now.toIso8601String()}\n\n'
+          '例:\n'
+          '{\n'
+          '  "title": "夜中の時計チェック",\n'
+          '  "category": "睡眠習慣",\n'
+          '  "question": "夜中にふと目が覚めて時計を確認してしまう経験、ありますよね。実はこの行動が再入眠を妨げ、睡眠の質を下げてしまうことがあります。なぜ夜中に時計を見ることが逆効果になるのでしょうか？",\n'
+          '  "hint": "時間を認識することで脳が活性化してしまいます"\n'
+          '}';
       
       String responseText;
 
@@ -104,7 +121,12 @@ class QuizService {
         responseText = jsonResult['candidates'][0]['content']['parts'][0]['text'] as String;
       }
 
-      return responseText;
+      // AIからの応答がマークダウンのコードブロックを含む場合があるため、それを除去する
+      final cleanJson = responseText.replaceAll('```json', '').replaceAll('```', '').trim();
+      
+      final decoded = jsonDecode(cleanJson) as Map<String, dynamic>;
+      return Quiz.fromJson(decoded);
+
     } catch (e) {
       // ignore: avoid_print
       print('クイズの生成中にエラーが発生しました: $e');
