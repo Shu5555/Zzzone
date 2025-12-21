@@ -32,6 +32,12 @@ jobs:
       - name: Get Flutter dependencies
         run: flutter pub get
 
+      - name: Create dummy .env file for asset bundling
+        run: |
+          mkdir -p assets
+          touch assets/.env
+          echo "# Dummy file for release build - actual values passed via --dart-define" > assets/.env
+
       - name: Build Android APK
         run: |
           flutter build apk --release \
