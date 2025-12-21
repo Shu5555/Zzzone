@@ -23,7 +23,7 @@ const RESOURCES = {"flutter.js": "888483df48293866f9f41d3d9274a779",
 "assets/assets/gacha/three_gacha_scene.html": "459c6bcefb5c1c646f56d0fc931e2c81",
 "assets/assets/persona_definitions.json": "95e01516d69ebf1a21b71bb5673b1ef3",
 "assets/fonts/MPLUSRounded1c-Medium.ttf": "22e0b5f50d889a011b32dba7ca806b6b",
-"assets/fonts/MaterialIcons-Regular.otf": "5bb7e784375b606d8035ed740a330b80",
+"assets/fonts/MaterialIcons-Regular.otf": "dfd77ece75c6b45eeed2cd85927f2965",
 "assets/fonts/MPLUSRounded1c-Bold.ttf": "9cd5c0b9269ecc2335307ff09861c38f",
 "assets/fonts/MPLUSRounded1c-Black.ttf": "5dc0dbd15beac01ee14c34130e16e323",
 "assets/fonts/MPLUSRounded1c-Thin.ttf": "121fefdeb00aa8e9855f909dd6f3708d",
@@ -50,9 +50,9 @@ const RESOURCES = {"flutter.js": "888483df48293866f9f41d3d9274a779",
 "three_effect_container.js": "d46610e336b6cd97101bdfa482bf7f84",
 "three_gacha_scene.js": "d1706d99eef415f104d5f9c626ca24d2",
 "favicon.png": "1f06100bb6c1e9e4a858d4b69abf92ac",
-"flutter_bootstrap.js": "f2d1d4c7bb5775697cd145c24c6d39dd",
+"flutter_bootstrap.js": "e5a24d23cda2b229ed5c66c6ae7b7d60",
 "version.json": "368ed262cb56c596e7b99730580af037",
-"main.dart.js": "40de0cb472523c6b630f983cb81e8e60"};
+"main.dart.js": "383586b1cb0373e49e322ce07c01e4ee"};
 // The application shell files that are downloaded before a service worker can
 // start.
 const CORE = ["main.dart.js",
