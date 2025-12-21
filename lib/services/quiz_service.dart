@@ -126,7 +126,8 @@ class QuizService {
       if (kIsWeb) {
         // Web版: Supabase Edge Function経由で呼び出し
         final supabaseUrl = kDebugMode
-            ? (dotenv.env['SUPABASE_URL'] ?? '')\            : const String.fromEnvironment('SUPABASE_URL');
+            ? (dotenv.env['SUPABASE_URL'] ?? '')
+            : const String.fromEnvironment('SUPABASE_URL');
         final edgeFunctionUrl = '$supabaseUrl/functions/v1/gemini-proxy';
 
         final response = await http.post(
