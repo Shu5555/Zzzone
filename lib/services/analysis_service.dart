@@ -108,13 +108,19 @@ $dataText
         final supabaseUrl = kDebugMode
             ? (dotenv.env['SUPABASE_URL'] ?? '')
             : const String.fromEnvironment('SUPABASE_URL');
-        final edgeFunctionUrl = '$supabaseUrl/functions/v1/gemini-proxy';
+        final supabaseAnonKey = kDebugMode
+            ? (dotenv.env['SUPABASE_ANON_KEY'] ?? '')
+            : const String.fromEnvironment('SUPABASE_ANON_KEY');
+        // 末尾のスラッシュを削除して二重スラッシュを防ぐ
+        final baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.substring(0, supabaseUrl.length - 1) : supabaseUrl;
+        final edgeFunctionUrl = '$baseUrl/functions/v1/gemini-proxy';
 
         response = await http
             .post(
               Uri.parse(edgeFunctionUrl),
               headers: {
                 'Content-Type': 'application/json',
+                'Authorization': 'Bearer $supabaseAnonKey',
               },
               body: jsonEncode({
                 'prompt': prompt,

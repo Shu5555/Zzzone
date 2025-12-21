@@ -39,13 +39,23 @@ class WeatherService {
     final supabaseUrl = kDebugMode
         ? (dotenv.env['SUPABASE_URL'] ?? '')
         : const String.fromEnvironment('SUPABASE_URL');
-    final edgeFunctionUrl = '$supabaseUrl/functions/v1/weather-proxy';
+    final supabaseAnonKey = kDebugMode
+        ? (dotenv.env['SUPABASE_ANON_KEY'] ?? '')
+        : const String.fromEnvironment('SUPABASE_ANON_KEY');
+    // 末尾のスラッシュを削除して二重スラッシュを防ぐ
+    final baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.substring(0, supabaseUrl.length - 1) : supabaseUrl;
+    final edgeFunctionUrl = '$baseUrl/functions/v1/weather-proxy';
 
     final uri = Uri.parse(edgeFunctionUrl).replace(
       queryParameters: {'city': cityName},
     );
 
-    final response = await http.get(uri);
+    final response = await http.get(
+      uri,
+      headers: {
+        'Authorization': 'Bearer $supabaseAnonKey',
+      },
+    );
 
     if (response.statusCode != 200) {
       throw Exception('天気予報の取得に失敗しました: ${response.statusCode}');
