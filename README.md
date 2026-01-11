@@ -60,13 +60,13 @@ Zzzoneは、日々の睡眠を記録・可視化して、全国のユーザー�
 - **ランダムモード**: 日替わりで異なる名言を表示
 
 ### 4. AI分析機能
-- **睡眠分析**: Google Gemini 2.5 Proが5〜30件の記録を分析
+- **睡眠分析**: Google Gemini 3 Flash Previewが5〜30件の記録を分析
 - **総合得点**: 睡眠の質・量・規則性を100点満点で評価
 - **パーソナライズ**: 昼間の眠気、二度寝の状況も考慮
 - **AIアシスタント設定**: 18種類の口調から選択可能
 
 ### 5. クイズ機能
-- **日替わりクイズ**: Google Gemini 2.5 Flashが毎日1問出題
+- **日替わりクイズ**: Google Gemini 3 Flash Previewが毎日1問出題
 - **報酬**: 正解で100スリープコイン獲得
 - **進捗保存**: 回答と解説を自動保存
 
@@ -101,8 +101,7 @@ Zzzoneは、日々の睡眠を記録・可視化して、全国のユーザー�
 |----------|------|
 | Supabase | ランキング・通貨・ギフトコード管理 |
 | Supabase Edge Functions | APIプロキシ（セキュリティ層） |
-| Google Gemini 2.5 Pro | AI睡眠分析 |
-| Google Gemini 2.5 Flash | クイズ生成・判定 |
+| Google Gemini 3 Flash Preview | AI睡眠分析・クイズ生成・判定 |
 | OpenWeatherMap API | 天気予報 |
 | Dropbox API | データバックアップ |
 

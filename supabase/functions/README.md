@@ -9,11 +9,12 @@ Gemini APIへのプロキシ。Flutter WebアプリからAPIキーを隠蔽し�
 
 **エンドポイント**: `https://<your-project>.supabase.co/functions/v1/gemini-proxy`
 
+**使用モデル**: `gemini-3-flash-preview`（統一モデル）
+
 **リクエスト**:
 ```json
 {
-  "prompt": "プロンプトテキスト",
-  "modelType": "pro" | "flash"
+  "prompt": "プロンプトテキスト"
 }
 ```
 
@@ -107,8 +108,7 @@ OPENWEATHERMAP_API_KEY=your-api-key
 curl -i --location --request POST 'http://localhost:54321/functions/v1/gemini-proxy' \
   --header 'Content-Type: application/json' \
   --data '{
-    "prompt": "こんにちは",
-    "modelType": "flash"
+    "prompt": "こんにちは"
   }'
 
 # Weather Proxyのテスト

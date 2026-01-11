@@ -9,7 +9,6 @@ const corsHeaders = {
 
 interface GeminiRequest {
   prompt: string
-  modelType: 'pro' | 'flash'
 }
 
 serve(async (req) => {
@@ -25,7 +24,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { prompt, modelType = 'pro' }: GeminiRequest = await req.json()
+    const { prompt }: GeminiRequest = await req.json()
 
     if (!prompt) {
       return new Response(
@@ -37,8 +36,8 @@ serve(async (req) => {
       )
     }
 
-    // Select the appropriate model
-    const modelName = modelType === 'flash' ? 'gemini-2.5-flash' : 'gemini-2.5-pro'
+    // Use unified model
+    const modelName = 'gemini-3-flash-preview'
     const apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`
 
     // Call Gemini API

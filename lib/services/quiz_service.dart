@@ -81,7 +81,6 @@ class QuizService {
           },
           body: jsonEncode({
             'prompt': prompt,
-            'modelType': 'flash',
           }),
         );
 
@@ -94,7 +93,7 @@ class QuizService {
       } else {
         // モバイル版: 直接Gemini APIを呼び出し
         final apiKey = _getApiKey()!;
-        final apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+        final apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
         final response = await http.post(
           Uri.parse(apiEndpoint),
@@ -171,7 +170,6 @@ class QuizService {
           },
           body: jsonEncode({
             'prompt': prompt,
-            'modelType': 'flash',
           }),
         );
 
@@ -184,7 +182,7 @@ class QuizService {
       } else {
         // モバイル版: 直接Gemini APIを呼び出し
         final apiKey = _getApiKey()!;
-        final apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+        final apiEndpoint = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
         final response = await http.post(
           Uri.parse(apiEndpoint),

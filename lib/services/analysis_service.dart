@@ -22,7 +22,7 @@ class AnalysisService {
   }
   
   static const String _apiEndpoint =
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent';
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
 
   final _timeoutDuration = const Duration(seconds: 60);
 
@@ -124,7 +124,6 @@ $dataText
               },
               body: jsonEncode({
                 'prompt': prompt,
-                'modelType': 'pro',
               }),
             )
             .timeout(_timeoutDuration);
