@@ -113782,7 +113782,7 @@ a=A.e3(h,0,null)
 a0=t.N
 a1=A.a3(["Content-Type","application/json","Authorization","Bearer "+A.n(j)],a0,a0)
 s=8
-return A.i(A.jX(a,B.K.hj(A.a3(["prompt",m,"modelType","pro"],a0,a0),null),null,a1).IR(0,B.UV),$async$Ab)
+return A.i(A.jX(a,B.K.hj(A.a3(["prompt",m],a0,a0),null),null,a1).IR(0,B.UV),$async$Ab)
 case 8:l=a8
 if(l.b===200){g=B.a1.bp(0,l.w)
 f=B.K.fo(0,g,null)
@@ -114876,7 +114876,7 @@ b=A.e3(h,0,null)
 a=t.N
 a0=A.a3(["Content-Type","application/json","Authorization","Bearer "+A.n(j)],a,a)
 s=7
-return A.i(A.jX(b,B.K.hj(A.a3(["prompt",m,"modelType","flash"],a,a),null),null,a0),$async$C5)
+return A.i(A.jX(b,B.K.hj(A.a3(["prompt",m],a,a),null),null,a0),$async$C5)
 case 7:g=a4
 if(g.b!==200){b=A.c7("\u30af\u30a4\u30ba\u306e\u751f\u6210\u306b\u5931\u6557\u3057\u307e\u3057\u305f: "+g.b)
 throw A.e(b)}b=g
@@ -114920,7 +114920,7 @@ c=A.e3(i,0,null)
 b=t.N
 a=A.a3(["Content-Type","application/json","Authorization","Bearer "+A.n(k)],b,b)
 s=7
-return A.i(A.jX(c,B.K.hj(A.a3(["prompt",n,"modelType","flash"],b,b),null),null,a),$async$CK)
+return A.i(A.jX(c,B.K.hj(A.a3(["prompt",n],b,b),null),null,a),$async$CK)
 case 7:h=a5
 if(h.b!==200){c=A.c7("\u56de\u7b54\u306e\u9001\u4fe1\u306b\u5931\u6557\u3057\u307e\u3057\u305f: "+h.b)
 throw A.e(c)}c=h
